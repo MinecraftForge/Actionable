@@ -17,7 +17,7 @@ jobs:
         with:
           private-key: ${{ secrets.GH_APP_KEY }}
           app-id: ${{ secrets.GH_APP_NAME }}
-      - uses: MinecraftForge/Actionable@b2238b595ce82b3af741f54e452a29c5b56b14d3
+      - uses: MinecraftForge/Actionable@faa9b2e692547b50655e9267756fda670728ba23
         with:
           prefixes: "@forgebot<ws>,/@autoforge<ws>"
           github-token: ${{ steps.generate_token.outputs.token }}

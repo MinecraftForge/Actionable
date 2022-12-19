@@ -1,0 +1,24 @@
+on: issue_comment
+        
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  discussions: write
+ 
+name: Slash commands
+jobs:
+  check_comments:
+    name: Check comments for /assign
+    runs-on: ubuntu-latest
+    steps:
+      - uses: navikt/github-app-token-generator@v1
+        id: generate_token
+        with:
+          private-key: ${{ secrets.GH_APP_KEY }}
+          app-id: ${{ secrets.GH_APP_NAME }}
+      - uses: MinecraftForge/Actionable@b2238b595ce82b3af741f54e452a29c5b56b14d3
+        with:
+          prefixes: "@forgebot<ws>,/@autoforge<ws>"
+          github-token: ${{ steps.generate_token.outputs.token }}
+          triage-team: triage

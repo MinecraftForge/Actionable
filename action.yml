@@ -1,5 +1,5 @@
-name: 'Hello World'
-description: 'Greet someone and record the time'
+name: 'Actionable'
+description: 'Custom MinecraftForge action'
 inputs:
   gh_app_key:
     required: true
@@ -14,9 +14,6 @@ inputs:
   triage_project:
     default: '4'
 
-outputs:
-  time: # id of output
-    description: 'The time we greeted you'
 runs:
   using: 'docker'
   image: 'Dockerfile'

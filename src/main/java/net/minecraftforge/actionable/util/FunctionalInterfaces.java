@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 
 import java.io.IOException;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 public class FunctionalInterfaces {
     public static <T> Command<T> wrap(ConsException<CommandContext<T>> consumer) {
@@ -35,6 +36,17 @@ public class FunctionalInterfaces {
         } catch (IOException ignored) {}
     }
 
+    public static <T> SupplierException<T> memoize(SupplierException<T> supplier) {
+        return new SupplierException<>() {
+            T value;
+            @Override
+            public T get() throws IOException {
+                if (value == null) value = supplier.get();
+                return value;
+            }
+        };
+    }
+
     public interface ConsException<T> {
         void accept(T t) throws Exception;
     }
@@ -45,5 +57,9 @@ public class FunctionalInterfaces {
 
     public interface RunnableException {
         void run() throws IOException;
+    }
+
+    public interface SupplierException<T> {
+        T get() throws IOException;
     }
 }

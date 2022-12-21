@@ -10,17 +10,22 @@ import net.minecraftforge.actionable.util.Jsons;
 import org.kohsuke.github.GHOrganization;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 public class PRCreateAction {
+    private static final Set<Action> HANDLED = EnumSet.of(Action.OPENED, Action.SYNCHRONIZE);
+
     public static void run(Main.GitHubGetter gitHubGetter, JsonNode payload) throws Throwable {
         final Action action = Action.get(payload);
-        if (action != Action.OPENED) return; // Only run on PR open
+        if (!HANDLED.contains(action)) return; // Only run on PR open
 
         final GitHub gitHub = gitHubGetter.get();
         final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
@@ -31,6 +36,40 @@ public class PRCreateAction {
 
         final GHOrganization organization = gitHub.getOrganization(repository.getOwnerName());
 
+        if (action == Action.OPENED) {
+            onCreate(gitHub, organization, pullRequest);
+        } else if (action == Action.SYNCHRONIZE) {
+            onSync(gitHub, organization, repository, pullRequest);
+        }
+    }
+
+    private static void onSync(GitHub gitHub, GHOrganization organization, GHRepository repository, GHPullRequest pullRequest) throws IOException {
+        final JsonNode queryJson = GitHubAccessor.graphQl(gitHub, """
+                query {
+                  repository(owner: "%s", name: "%s") {
+                    pullRequest(number: %s) {
+                        mergeable
+                        number
+                        permalink
+                        title
+                        updatedAt
+                        labels(first: 100) {
+                          nodes {
+                            name
+                          }
+                        }
+                    }
+                  }
+                }""", repository.getOwnerName(), repository.getName(), pullRequest.getNumber());
+
+        final JsonNode json = Jsons.at(queryJson, "data.repository.pullRequest");
+        final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> organization
+                .getTeamByName(GithubVars.TRIAGE_TEAM.get())
+                .getMembers());
+        PushAction.checkConflict(triagers, gitHub, json);
+    }
+
+    private static void onCreate(GitHub gitHub, GHOrganization organization, GHPullRequest pullRequest) throws IOException {
         // We split into steps to not crash if someone does one of the steps manually
         final List<FunctionalInterfaces.RunnableException> steps = new ArrayList<>();
 

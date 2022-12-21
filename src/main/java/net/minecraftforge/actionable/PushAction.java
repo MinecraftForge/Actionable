@@ -100,7 +100,9 @@ public class PushAction {
 
     public static void checkConflict(FunctionalInterfaces.SupplierException<Set<GHUser>> triagers, GitHub gitHub, JsonNode node) throws IOException {
         final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equals(LABEL_NAME));
+        System.out.println("Has label: " + hasLabel);
         final MergeableState state = MergeableState.valueOf(node.get("mergeable").asText());
+        System.out.println("Has state: " + state);
         if (hasLabel && state == MergeableState.CONFLICTING) return; // We have conflicts and the PR has the label already
 
         final int number = node.get("number").intValue();

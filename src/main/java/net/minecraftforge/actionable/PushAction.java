@@ -99,7 +99,7 @@ public class PushAction {
     }
 
     public static void checkConflict(FunctionalInterfaces.SupplierException<Set<GHUser>> triagers, GitHub gitHub, JsonNode node) throws IOException {
-        final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equals(LABEL_NAME));
+        final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equalsIgnoreCase(LABEL_NAME));
         System.out.println("Has label: " + hasLabel);
         final MergeableState state = MergeableState.valueOf(node.get("mergeable").asText());
         System.out.println("Has state: " + state);

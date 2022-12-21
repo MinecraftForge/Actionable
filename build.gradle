@@ -1,0 +1,31 @@
+plugins {
+  id 'java'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    url = 'https://libraries.minecraft.net'
+  }
+}
+
+dependencies {
+  compileOnly 'org.jetbrains:annotations:23.1.0'
+  implementation 'org.kohsuke:github-api:1.313'
+  implementation 'org.bouncycastle:bcpkix-jdk15on:1.58'
+
+  implementation 'io.jsonwebtoken:jjwt-api:0.10.5'
+  implementation 'io.jsonwebtoken:jjwt-impl:0.10.5'
+  implementation 'io.jsonwebtoken:jjwt-jackson:0.10.5'
+
+  implementation 'com.mojang:brigadier:1.0.18'
+}
+
+shadowJar {
+  manifest.attributes([
+          'Main-Class': 'net.minecraftforge.actionable.Main'
+  ])
+  destinationDirectory = file('dist')
+  archiveFileName = 'app.jar'
+}

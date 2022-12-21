@@ -1,0 +1,24 @@
+name: 'Hello World'
+description: 'Greet someone and record the time'
+inputs:
+  gh_app_key:
+    required: true
+  gh_app_name:
+    required: true
+  command_prefixes:
+    default: '/'
+  allow_commands_in_edits:
+    default: 'false'
+  triage_team:
+    default: 'triage'
+  triage_project:
+    default: '4'
+
+outputs:
+  time: # id of output
+    description: 'The time we greeted you'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.gh_app_key }} ${{ inputs.gh_app_name }} ${{ inputs.command_prefixes }}

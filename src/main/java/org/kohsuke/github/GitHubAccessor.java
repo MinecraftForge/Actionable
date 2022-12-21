@@ -2,7 +2,7 @@ package org.kohsuke.github;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
-import net.minecraftforge.actionable.util.ReportedContentClassifiers;
+import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
 
 import java.io.IOException;
 

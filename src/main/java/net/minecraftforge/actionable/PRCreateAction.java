@@ -2,7 +2,7 @@ package net.minecraftforge.actionable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
-import net.minecraftforge.actionable.util.Action;
+import net.minecraftforge.actionable.util.enums.Action;
 import net.minecraftforge.actionable.util.DiffUtils;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
@@ -15,9 +15,7 @@ import org.kohsuke.github.GitHubAccessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class PRCreateAction {
     public static void run(Main.GitHubGetter gitHubGetter, JsonNode payload) throws Throwable {

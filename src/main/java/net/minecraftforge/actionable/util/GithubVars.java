@@ -11,6 +11,7 @@ public class GithubVars {
     public static final Var<String> REPOSITORY = var(Type.GITHUB, "REPOSITORY");
     public static final Var<String> REPOSITORY_OWNER = var(Type.GITHUB, "REPOSITORY_OWNER");
     public static final Var<String> EVENT_PATH = var(Type.GITHUB, "EVENT_PATH");
+    public static final Var<String> REF = var(Type.GITHUB, "REF");
     public static final Var<GithubEvent> EVENT = new Var<>(Type.GITHUB, "EVENT_NAME", it -> GithubEvent.BY_ID.getOrDefault(it, GithubEvent.UNKNOWN));
 
     public static final Var<String> GH_APP_KEY = var(Type.INPUT, "GH_APP_KEY");

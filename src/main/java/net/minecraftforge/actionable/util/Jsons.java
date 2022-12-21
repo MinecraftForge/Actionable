@@ -2,6 +2,9 @@ package net.minecraftforge.actionable.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 public class Jsons {
     public static JsonNode at(JsonNode node, String path) {
         final String[] paths = path.split("\\.");
@@ -9,5 +12,9 @@ public class Jsons {
             node = node.get(s);
         }
         return node;
+    }
+
+    public static Stream<JsonNode> stream(JsonNode array) {
+        return StreamSupport.stream(array.spliterator(), false);
     }
 }

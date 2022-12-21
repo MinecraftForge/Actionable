@@ -23,5 +23,5 @@ jobs:
         with:
           gh_app_key: ${{ secrets.GH_APP_KEY }}
           gh_app_name: ${{ secrets.GH_APP_NAME }}
-          triage_team: triage
+          triage_team: MinecraftForge/Triage
           triage_project: 4

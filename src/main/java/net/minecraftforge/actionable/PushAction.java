@@ -30,6 +30,7 @@ public class PushAction {
 
     static {
         SERVICE.setKeepAliveTime(2, TimeUnit.SECONDS);
+        SERVICE.allowCoreThreadTimeOut(true);
     }
 
     public static void run(Main.GitHubGetter gitHubGetter, JsonNode payload) throws Throwable {

@@ -64,7 +64,7 @@ public class PRCreateAction {
 
         final JsonNode json = Jsons.at(queryJson, "data.repository.pullRequest");
         final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> organization
-                .getTeamByName(GithubVars.TRIAGE_TEAM.get())
+                .getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
                 .getMembers());
         PushAction.checkConflict(triagers, gitHub, json);
     }
@@ -96,7 +96,7 @@ public class PRCreateAction {
         });
 
         steps.add(() -> pullRequest.requestTeamReviewers(List.of(
-                organization.getTeamByName(GithubVars.TRIAGE_TEAM.get())
+                organization.getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
         )));
 
         steps.add(() -> addToProject(gitHub, organization, GithubVars.TRIAGE_PROJECT.get(), pullRequest));

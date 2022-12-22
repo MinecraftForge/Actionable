@@ -83,7 +83,7 @@ public class PushAction {
         }
 
         final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> gitHub.getOrganization(repository.getOwnerName())
-                .getTeamByName(GithubVars.TRIAGE_TEAM.get())
+                .getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
                 .getMembers());
         for (int i = 0; i < nodes.size(); i++) {
             checkConflict(triagers, gitHub, nodes.get(i));

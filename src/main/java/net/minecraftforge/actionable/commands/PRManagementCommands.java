@@ -12,6 +12,7 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
+import java.util.Locale;
 import java.util.function.Predicate;
 
 import static net.minecraftforge.actionable.commands.Commands.argument;
@@ -53,7 +54,7 @@ public class PRManagementCommands {
                             final GHUser author = issue.getUser();
                             final GHTeam team = ctx.getSource().gitHub()
                                     .getOrganization(ctx.getSource().issue().getRepository().getName())
-                                    .getTeamByName(parseTeam(StringArgumentType.getString(ctx, "team")));
+                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team")));
 
                             // We don't want to assign the PR author to their own PR
                             issue.setAssignees(team.getMembers().stream()
@@ -65,7 +66,7 @@ public class PRManagementCommands {
     }
 
     private static String parseTeam(String input) {
-        return input.substring(input.indexOf("/") + 1);
+        return input.substring(input.indexOf("/") + 1).toLowerCase(Locale.ROOT);
     }
 
 }

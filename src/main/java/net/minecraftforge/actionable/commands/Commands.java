@@ -25,7 +25,7 @@ public class Commands {
         final String name = split.length == 1 ? split[0] : split[1];
         return FunctionalInterfaces.wrapPred(ctx -> ctx
                 .gitHub().getOrganization(org)
-                .getTeamByName(name).hasMember(ctx.user()));
+                .getTeamBySlug(name).hasMember(ctx.user()));
     }
 
     public static Predicate<GHCommandContext> hasPermission(GHPermissionType permission) {

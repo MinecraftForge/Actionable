@@ -36,11 +36,11 @@ public class PRManagementCommands {
 
         dispatcher.register(literal("closes")
                 .requires(canManage.and(it -> it.issue().isPullRequest()))
-                .then(argument("issue", StringArgumentType.word())
+                .then(argument("issue", StringArgumentType.greedyString())
                         .executes(wrap(ctx -> {
                             final String body = ctx.getSource().issue().getBody();
                             final String bodyN = body == null || body.isBlank() ? "" : body + "\n";
-                            final String toClose = StringArgumentType.getString(ctx, "issue");
+                            final String toClose = StringArgumentType.getString(ctx, "issue").trim();
                             ctx.getSource().issue().setBody(
                                     bodyN + (toClose.startsWith("#") ? toClose : "#" + toClose)
                             );
@@ -48,13 +48,13 @@ public class PRManagementCommands {
 
         dispatcher.register(literal("assign")
                 .requires(canManage)
-                .then(argument("team", StringArgumentType.word())
+                .then(argument("team", StringArgumentType.greedyString())
                         .executes(wrap(ctx -> {
                             final GHIssue issue = ctx.getSource().issue();
                             final GHUser author = issue.getUser();
                             final GHTeam team = ctx.getSource().gitHub()
-                                    .getOrganization(ctx.getSource().issue().getRepository().getOwnerName())
-                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team")));
+                                    .getOrganization(GithubVars.REPOSITORY_OWNER.get())
+                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team").trim()));
 
                             // We don't want to assign the PR author to their own PR
                             issue.setAssignees(team.getMembers().stream()
@@ -66,7 +66,7 @@ public class PRManagementCommands {
     }
 
     private static String parseTeam(String input) {
-        return input.substring(input.indexOf("/") + 1).toLowerCase(Locale.ROOT);
+        return input.substring(input.lastIndexOf("/") + 1).toLowerCase(Locale.ROOT);
     }
 
 }

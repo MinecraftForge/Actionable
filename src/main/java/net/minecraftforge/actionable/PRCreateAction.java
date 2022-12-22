@@ -95,7 +95,7 @@ public class PRCreateAction {
             }
         });
 
-        steps.add(() -> pullRequest.requestTeamReviewers(List.of(
+        if (!pullRequest.isDraft()) steps.add(() -> pullRequest.requestTeamReviewers(List.of(
                 organization.getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
         )));
 

@@ -1,5 +1,6 @@
 package net.minecraftforge.actionable.util;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -19,6 +20,12 @@ public class GithubVars {
     public static final Var<String> TRIAGE_TEAM = var(Type.INPUT, "TRIAGE_TEAM");
     public static final Var<Integer> TRIAGE_PROJECT = new Var<>(Type.INPUT, "TRIAGE_PROJECT", Integer::parseInt);
     public static final Var<Boolean> ALLOW_COMMANDS_IN_EDITS = new Var<>(Type.INPUT, "ALLOW_COMMANDS_IN_EDITS", Boolean::parseBoolean);
+    public static final Var<AssignTeams> LABELS_TO_TEAMS = new Var<>(Type.INPUT, "LABELS_TO_TEAMS", it -> {
+        final String[] split = it.trim().split(",");
+        final Map<String, String> teams = Stream.of(split).map(s -> s.trim().split("->"))
+                .collect(Collectors.toMap(ar -> ar[0].trim(), ar -> ar[1].trim()));
+        return new AssignTeams(teams.get("default"), teams);
+    });
     public static final Var<Set<String>> COMMAND_PREFIXES = new Var<>(Type.INPUT, "COMMAND_PREFIXES", it -> Stream.of(it.split(","))
             .map(s -> s.replace("<ws>", " ")).collect(Collectors.toSet()));
 
@@ -45,4 +52,6 @@ public class GithubVars {
         INPUT,
         GITHUB
     }
+
+    public record AssignTeams(String defaultTeam, Map<String, String> byLabel) {}
 }

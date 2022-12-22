@@ -8,6 +8,7 @@ public enum Action {
     OPENED,
     CREATED,
     EDITED,
+    SUBMITTED,
     SYNCHRONIZE;
 
     public static Action get(JsonNode payload) {

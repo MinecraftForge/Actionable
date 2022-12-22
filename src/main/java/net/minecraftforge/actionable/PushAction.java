@@ -124,6 +124,12 @@ public class PushAction {
             // We have conflicts but the PR doesn't have the label... add it.
             pr.addLabels(LABEL_NAME);
 
+            // Clear assignees
+            pr.setAssignees(List.of());
+
+            // And remove the assigned label
+            GitHubAccessor.removeLabel(pr, "Assigned");
+
             pr.comment("@%s, this pull request has conflicts, please resolve them for this PR to move forward.".formatted(pr.getUser().getLogin()));
         }
     }

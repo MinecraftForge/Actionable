@@ -13,6 +13,8 @@ inputs:
     default: 'triage'
   triage_project:
     default: '4'
+  labels_to_teams:
+    default: 'default -> api, rendering -> rendering, LTS Backport -> legacy'
 
 runs:
   using: 'docker'

@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 public enum GithubEvent {
     ISSUE_COMMENT,
     PULL_REQUEST,
+    PULL_REQUEST_REVIEW,
     PUSH,
 
     UNKNOWN;

@@ -28,6 +28,7 @@ public class Main {
         switch (GithubVars.EVENT.get()) {
             case ISSUE_COMMENT -> runCommand();
             case PULL_REQUEST -> PRCreateAction.run(Main::buildApi, payload());
+            case PULL_REQUEST_REVIEW -> PRReviewAction.run(Main::buildApi, payload());
             case PUSH -> PushAction.run(Main::buildApi, payload());
         }
     }

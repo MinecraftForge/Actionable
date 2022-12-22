@@ -59,13 +59,13 @@ public class GitHubAccessor {
     }
 
     public static void removeLabel(GHIssue issue, String label) throws IOException {
-        if (issue.getLabels().stream().anyMatch(it -> it.getName().equals(label))) {
+        if (issue.getLabels().stream().anyMatch(it -> it.getName().equalsIgnoreCase(label))) {
             issue.removeLabel(label);
         }
     }
 
     public static void addLabel(GHIssue issue, String label) throws IOException {
-        if (issue.getLabels().stream().noneMatch(it -> it.getName().equals(label))) {
+        if (issue.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(label))) {
             issue.addLabels(label);
         }
     }

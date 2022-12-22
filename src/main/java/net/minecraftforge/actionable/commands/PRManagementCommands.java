@@ -53,7 +53,7 @@ public class PRManagementCommands {
                             final GHIssue issue = ctx.getSource().issue();
                             final GHUser author = issue.getUser();
                             final GHTeam team = ctx.getSource().gitHub()
-                                    .getOrganization(ctx.getSource().issue().getRepository().getName())
+                                    .getOrganization(ctx.getSource().issue().getRepository().getOwnerName())
                                     .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team")));
 
                             // We don't want to assign the PR author to their own PR

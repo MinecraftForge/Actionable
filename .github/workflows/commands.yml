@@ -5,7 +5,7 @@ on:
     types: [created]
   push:
     branches:
-      - 'main'
+      - 'tests'
         
 permissions:
   contents: read
@@ -19,9 +19,9 @@ jobs:
     name: Run action
     runs-on: ubuntu-latest
     steps:
-      - uses: MinecraftForge/Actionable@v1
+      - uses: ForgeForce/ForgeCommands@jvm
         with:
           gh_app_key: ${{ secrets.GH_APP_KEY }}
           gh_app_name: ${{ secrets.GH_APP_NAME }}
-          triage_team: MinecraftForge/API
+          triage_team: api
           triage_project: 4

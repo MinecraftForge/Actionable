@@ -3,7 +3,9 @@ package net.minecraftforge.actionable.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
+import net.minecraftforge.actionable.commands.lib.gh.TeamArgType;
 import net.minecraftforge.actionable.util.GithubVars;
+import net.minecraftforge.actionable.util.Label;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHPermissionType;
 import org.kohsuke.github.GHPullRequest;
@@ -12,7 +14,6 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
-import java.util.Locale;
 import java.util.function.Predicate;
 
 import static net.minecraftforge.actionable.commands.Commands.argument;
@@ -48,25 +49,19 @@ public class PRManagementCommands {
 
         dispatcher.register(literal("assign")
                 .requires(canManage)
-                .then(argument("team", StringArgumentType.greedyString())
+                .then(argument("team", TeamArgType.team(gh, GithubVars.REPOSITORY_OWNER.get()))
                         .executes(wrap(ctx -> {
                             final GHIssue issue = ctx.getSource().issue();
                             final GHUser author = issue.getUser();
-                            final GHTeam team = ctx.getSource().gitHub()
-                                    .getOrganization(GithubVars.REPOSITORY_OWNER.get())
-                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team").trim()));
+                            final GHTeam team = ctx.getArgument("team", GHTeam.class);
 
                             // We don't want to assign the PR author to their own PR
                             issue.setAssignees(team.getMembers().stream()
                                     .filter(it -> !it.equals(author)).limit(10).toList());
 
-                            GitHubAccessor.addLabel(issue, "Assigned");
-                            GitHubAccessor.removeLabel(issue, "Triage");
+                            Label.ASSIGNED.addAndIgnore(issue);
+                            Label.TRIAGE.removeAndIgnore(issue);
                         }))));
-    }
-
-    private static String parseTeam(String input) {
-        return input.substring(input.lastIndexOf("/") + 1).toLowerCase(Locale.ROOT);
     }
 
 }

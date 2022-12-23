@@ -2,11 +2,12 @@ package net.minecraftforge.actionable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mojang.brigadier.CommandDispatcher;
-import net.minecraftforge.actionable.commands.Commands;
-import net.minecraftforge.actionable.commands.lib.CommandManager;
-import net.minecraftforge.actionable.commands.lib.GHCommandContext;
+import net.minecraftforge.actionable.event.EventHandler;
+import net.minecraftforge.actionable.event.IssueCommentHandler;
+import net.minecraftforge.actionable.event.PRHandler;
+import net.minecraftforge.actionable.event.PRReviewHandler;
 import net.minecraftforge.actionable.util.AuthUtil;
+import net.minecraftforge.actionable.util.GitHubEvent;
 import net.minecraftforge.actionable.util.GithubVars;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
@@ -21,34 +22,40 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
-public class Main {
+import static net.minecraftforge.actionable.util.GitHubEvent.ISSUE_COMMENT;
+import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST;
+import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_REVIEW;
+import static net.minecraftforge.actionable.util.GitHubEvent.PUSH;
+
+public record Main(
+        Map<GitHubEvent, Supplier<EventHandler>> eventHandlers
+) {
 
     public static void main(String[] args) throws Throwable {
-        switch (GithubVars.EVENT.get()) {
-            case ISSUE_COMMENT -> runCommand();
-            case PULL_REQUEST -> PRCreateAction.run(Main::buildApi, payload());
-            case PULL_REQUEST_REVIEW -> PRReviewAction.run(Main::buildApi, payload());
-            case PUSH -> PushAction.run(Main::buildApi, payload());
+        final Map<GitHubEvent, Supplier<EventHandler>> handlers = new EnumMap<>(GitHubEvent.class);
+
+        {
+            handlers.put(PUSH, PushAction::new);
+            handlers.put(ISSUE_COMMENT, IssueCommentHandler::new);
+            handlers.put(PULL_REQUEST, PRHandler::new);
+            handlers.put(PULL_REQUEST_REVIEW, PRReviewHandler::new);
+        }
+
+        new Main(handlers).run();
+    }
+
+    public void run() throws Throwable {
+        final Supplier<EventHandler> handler = eventHandlers.get(GithubVars.EVENT.get());
+        if (handler != null) {
+            handler.get().handle(this::buildApi, this.payload());
         }
     }
 
-    private static void runCommand() throws Throwable {
-        final JsonNode payload = payload();
-
-        final GitHub gh = buildApi();
-
-        final CommandDispatcher<GHCommandContext> dispatcher = new CommandDispatcher<>();
-        Commands.register(gh, dispatcher);
-
-        new CommandManager(
-                GithubVars.COMMAND_PREFIXES.get(),
-                GithubVars.ALLOW_COMMANDS_IN_EDITS.get(),
-                gh, dispatcher
-        ).run(payload);
-    }
-
-    private static GitHub buildApi() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    private GitHub buildApi() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         final PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(AuthUtil.parsePKCS8(GithubVars.GH_APP_KEY.get())));
         final String appId = GithubVars.GH_APP_NAME.get();
 
@@ -61,7 +68,7 @@ public class Main {
                 .build();
     }
 
-    private static JsonNode payload() throws IOException {
+    private JsonNode payload() throws IOException {
         try (final InputStream in = Files.newInputStream(Path.of(GithubVars.EVENT_PATH.get()))) {
             return new ObjectMapper().readTree(in);
         }

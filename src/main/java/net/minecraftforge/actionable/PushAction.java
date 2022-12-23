@@ -2,9 +2,11 @@ package net.minecraftforge.actionable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import net.minecraftforge.actionable.event.EventHandler;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
+import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.enums.MergeableState;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHPullRequest;
@@ -23,7 +25,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-public class PushAction {
+public class PushAction implements EventHandler {
     private static final String LABEL_NAME = "Needs Rebase";
     private static final long PR_BASE_TIME = 30 + 60; // 1.5 seconds
     private static final ScheduledThreadPoolExecutor SERVICE = new ScheduledThreadPoolExecutor(1, run -> new Thread(run, "Conflict Checker")); // Non - daemon
@@ -33,7 +35,8 @@ public class PushAction {
         SERVICE.allowCoreThreadTimeOut(true);
     }
 
-    public static void run(Main.GitHubGetter gitHubGetter, JsonNode payload) throws Throwable {
+    @Override
+    public void handle(Main.GitHubGetter gitHubGetter, JsonNode payload) throws Throwable {
         final String branch = getBranchName(GithubVars.REF.get());
         if (branch == null) return; // Only check for commits pushed to branches
 
@@ -128,7 +131,7 @@ public class PushAction {
             pr.setAssignees(List.of());
 
             // And remove the assigned label
-            GitHubAccessor.removeLabel(pr, "Assigned");
+            Label.ASSIGNED.removeAndIgnore(pr);
 
             pr.comment("@%s, this pull request has conflicts, please resolve them for this PR to move forward.".formatted(pr.getUser().getLogin()));
         }

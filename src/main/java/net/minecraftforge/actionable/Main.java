@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.minecraftforge.actionable.event.EventHandler;
 import net.minecraftforge.actionable.event.IssueCommentHandler;
+import net.minecraftforge.actionable.event.IssueHandler;
 import net.minecraftforge.actionable.event.PRHandler;
 import net.minecraftforge.actionable.event.PRReviewHandler;
 import net.minecraftforge.actionable.event.PushHandler;
@@ -27,6 +28,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static net.minecraftforge.actionable.util.GitHubEvent.ISSUES;
 import static net.minecraftforge.actionable.util.GitHubEvent.ISSUE_COMMENT;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_REVIEW;
@@ -41,6 +43,7 @@ public record Main(
 
         {
             handlers.put(PUSH, PushHandler::new);
+            handlers.put(ISSUES, IssueHandler::new);
             handlers.put(ISSUE_COMMENT, IssueCommentHandler::new);
             handlers.put(PULL_REQUEST, PRHandler::new);
             handlers.put(PULL_REQUEST_REVIEW, PRReviewHandler::new);

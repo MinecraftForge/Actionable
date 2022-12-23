@@ -17,6 +17,8 @@ inputs:
     default: 'default -> api'
   latest_version:
     default: ''
+  forum_label:
+    default: 'Forum'
 
 runs:
   using: 'docker'

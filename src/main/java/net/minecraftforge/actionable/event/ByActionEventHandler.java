@@ -16,7 +16,7 @@ public abstract class ByActionEventHandler<T extends Record> implements EventHan
     protected final Consumer<T> preAction;
     protected final Map<Action, Handler<T>> handlers = new EnumMap<>(Action.class);
 
-    public ByActionEventHandler(Class<T> payloadType, Consumer<T> preAction, Consumer<Registrar<T>> registrar) {
+    protected ByActionEventHandler(Class<T> payloadType, Consumer<T> preAction, Consumer<Registrar<T>> registrar) {
         this.payloadType = payloadType;
         this.preAction = preAction;
         registrar.accept(new Registrar<>() {

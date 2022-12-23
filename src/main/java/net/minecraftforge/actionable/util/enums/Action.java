@@ -11,6 +11,7 @@ public enum Action {
     SUBMITTED,
     READY_FOR_REVIEW,
     SYNCHRONIZE,
+    LABELED,
 
     UNKNOWN;
 

@@ -11,6 +11,7 @@ public enum GitHubEvent {
     PULL_REQUEST,
     PULL_REQUEST_REVIEW,
     PUSH,
+    ISSUES,
 
     UNKNOWN;
 

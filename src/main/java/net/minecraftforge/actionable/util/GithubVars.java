@@ -26,6 +26,7 @@ public class GithubVars {
     public static final Var<String> GH_APP_KEY = var(Type.INPUT, "GH_APP_KEY");
     public static final Var<String> GH_APP_NAME = var(Type.INPUT, "GH_APP_NAME");
     public static final Var<String> TRIAGE_TEAM = var(Type.INPUT, "TRIAGE_TEAM");
+    public static final Var<String> FORUM_LABEL = var(Type.INPUT, "FORUM_LABEL");
     public static final Var<String> LATEST_VERSION = var(Type.INPUT, "LATEST_VERSION");
     public static final Var<Integer> TRIAGE_PROJECT = new Var<>(Type.INPUT, "TRIAGE_PROJECT", Integer::parseInt);
     public static final Var<Boolean> ALLOW_COMMANDS_IN_EDITS = new Var<>(Type.INPUT, "ALLOW_COMMANDS_IN_EDITS", Boolean::parseBoolean);

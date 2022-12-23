@@ -6,6 +6,7 @@ import org.kohsuke.github.GitHub;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,15 +31,19 @@ public class GithubVars {
     public static final Var<Boolean> ALLOW_COMMANDS_IN_EDITS = new Var<>(Type.INPUT, "ALLOW_COMMANDS_IN_EDITS", Boolean::parseBoolean);
     public static final Var<AssignTeams> LABELS_TO_TEAMS = new Var<>(Type.INPUT, "LABELS_TO_TEAMS", it -> {
         final String[] split = it.trim().split(",");
-        final Map<String, AssignTeams.TeamLike> teams = Stream.of(split).map(s -> s.trim().split("->"))
-                .collect(Collectors.toMap(ar -> ar[0].trim(), ar -> {
+        final Map<String, AssignTeams.TeamLike> teams = new LinkedHashMap<>();
+        Stream.of(split).map(s -> s.trim().split("->"))
+                .forEach(ar -> {
                     final String value = ar[1].trim();
                     if (value.startsWith("u:")) {
-                        return AssignTeams.TeamLike.users(Stream.of(value.substring(2).split("\\+"))
-                                .map(String::trim).toList());
+                        teams.put(ar[0].trim(), AssignTeams.TeamLike.users(List.of(value.substring(2).trim())));
+                    } else if (value.contains("+")) {
+                        teams.put(ar[0].trim(), AssignTeams.TeamLike.users(Stream.of(value.split("\\+"))
+                                .map(String::trim).toList()));
+                    } else {
+                        teams.put(ar[0].trim(), AssignTeams.TeamLike.team(value));
                     }
-                    return AssignTeams.TeamLike.team(value);
-                }));
+                });
         return new AssignTeams(teams.get("default"), teams);
     });
     public static final Var<Set<String>> COMMAND_PREFIXES = new Var<>(Type.INPUT, "COMMAND_PREFIXES", it -> Stream.of(it.split(","))

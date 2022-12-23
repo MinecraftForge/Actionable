@@ -14,7 +14,7 @@ inputs:
   triage_project:
     default: '4'
   labels_to_teams:
-    default: 'default -> api, rendering -> rendering, LTS Backport -> legacy'
+    default: 'default -> api'
   latest_version:
     default: ''
 

@@ -7,6 +7,7 @@ import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.enums.Action;
+import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHOrganization;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRepository;
@@ -34,10 +35,16 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                                 payload.pull_request.requestTeamReviewers(List.of(team));
                             }
                         })
+                        .register(Action.LABELED, IssueHandler::onSpamLabel)
         );
     }
 
-    public record Payload(GHPullRequest pull_request, GHRepository repository, GHOrganization organization) {}
+    public record Payload(GHPullRequest pull_request, GHRepository repository, GHOrganization organization) implements IssueHandler.IssuePayload {
+        @Override
+        public GHIssue issue() {
+            return pull_request;
+        }
+    }
 
     private static void onSync(GitHub gitHub, Payload payload, JsonNode $) throws IOException {
         final JsonNode queryJson = GitHubAccessor.graphQl(gitHub, """

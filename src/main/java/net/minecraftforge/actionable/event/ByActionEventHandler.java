@@ -47,5 +47,15 @@ public abstract class ByActionEventHandler<T extends Record> implements EventHan
 
     public interface Registrar<T> {
         Registrar<T> register(Action action, Handler<T> handler);
+
+        @SuppressWarnings("unchecked")
+        default Registrar<T> register(Action action, Handler<T>... handlers) {
+            this.register(action, (gitHub, payload, payloadJson) -> {
+                for (final Handler<T> handler : handlers) {
+                    handler.handle(gitHub, payload, payloadJson);
+                }
+            });
+            return this;
+        }
     }
 }

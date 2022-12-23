@@ -25,7 +25,7 @@ public class GitHubAccessor {
     }
 
     public static void lock(GHIssue issue, LockReason reason) throws IOException {
-        issue.root().createRequest().method("PUT").withUrlPath(issue.getApiRoute() + "/lock")
+        issue.root().createRequest().method("PUT").withUrlPath(issue.getIssuesApiRoute() + "/lock")
                 .inBody().with("lock_reason", reason.toString()).send();
     }
 

@@ -30,7 +30,18 @@ public class Jsons {
             final RecordComponent comp = recordComponents[i];
             final JsonNode json = node.get(comp.getName());
             argTypes[i] = comp.getType();
-            args[i] = json == null ? null : reader.forType(comp.getType()).readValue(json);
+
+            if (json == null) {
+                final Or annotation = comp.getAnnotation(Or.class);
+                if (annotation == null) {
+                    args[i] = null;
+                } else {
+                    final JsonNode sub = node.get(annotation.fieldName());
+                    args[i] = sub == null ? null : reader.forType(annotation.type()).readValue(sub);
+                }
+            } else {
+                args[i] = reader.forType(comp.getType()).readValue(json);
+            }
         }
         return type.getDeclaredConstructor(argTypes).newInstance(args);
     }

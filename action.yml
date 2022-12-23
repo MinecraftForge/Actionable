@@ -19,6 +19,8 @@ inputs:
     default: ''
   forum_label:
     default: 'Forum'
+  spam_label:
+    default: 'Spam'
 
 runs:
   using: 'docker'

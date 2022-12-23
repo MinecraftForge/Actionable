@@ -1,5 +1,12 @@
 package net.minecraftforge.actionable.util;
 
+import org.kohsuke.github.GHOrganization;
+import org.kohsuke.github.GHUser;
+import org.kohsuke.github.GitHub;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -23,8 +30,15 @@ public class GithubVars {
     public static final Var<Boolean> ALLOW_COMMANDS_IN_EDITS = new Var<>(Type.INPUT, "ALLOW_COMMANDS_IN_EDITS", Boolean::parseBoolean);
     public static final Var<AssignTeams> LABELS_TO_TEAMS = new Var<>(Type.INPUT, "LABELS_TO_TEAMS", it -> {
         final String[] split = it.trim().split(",");
-        final Map<String, String> teams = Stream.of(split).map(s -> s.trim().split("->"))
-                .collect(Collectors.toMap(ar -> ar[0].trim(), ar -> ar[1].trim()));
+        final Map<String, AssignTeams.TeamLike> teams = Stream.of(split).map(s -> s.trim().split("->"))
+                .collect(Collectors.toMap(ar -> ar[0].trim(), ar -> {
+                    final String value = ar[1].trim();
+                    if (value.startsWith("u:")) {
+                        return AssignTeams.TeamLike.users(Stream.of(value.substring(2).split("\\+"))
+                                .map(String::trim).toList());
+                    }
+                    return AssignTeams.TeamLike.team(value);
+                }));
         return new AssignTeams(teams.get("default"), teams);
     });
     public static final Var<Set<String>> COMMAND_PREFIXES = new Var<>(Type.INPUT, "COMMAND_PREFIXES", it -> Stream.of(it.split(","))
@@ -54,5 +68,21 @@ public class GithubVars {
         GITHUB
     }
 
-    public record AssignTeams(String defaultTeam, Map<String, String> byLabel) {}
+    public record AssignTeams(TeamLike defaultTeam, Map<String, TeamLike> byLabel) {
+        public interface TeamLike {
+            Set<GHUser> getUsers(GitHub gitHub, GHOrganization organization) throws IOException;
+
+            static TeamLike team(String name) {
+                return (github, organization) -> organization.getTeamBySlug(name).getMembers();
+            }
+
+            static TeamLike users(List<String> names) {
+                return (gitHub, organization) -> {
+                    final Set<GHUser> users = new HashSet<>();
+                    for (final String name : names) users.add(gitHub.getUser(name));
+                    return users;
+                };
+            }
+        }
+    }
 }

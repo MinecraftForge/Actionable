@@ -3,7 +3,6 @@ package net.minecraftforge.actionable.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
-import net.minecraftforge.actionable.commands.lib.gh.TeamArgType;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Label;
 import org.kohsuke.github.GHIssue;
@@ -14,6 +13,7 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
+import java.util.Locale;
 import java.util.function.Predicate;
 
 import static net.minecraftforge.actionable.commands.Commands.argument;
@@ -49,11 +49,13 @@ public class PRManagementCommands {
 
         dispatcher.register(literal("assign")
                 .requires(canManage)
-                .then(argument("team", TeamArgType.team(gh, GithubVars.REPOSITORY_OWNER.get()))
+                .then(argument("team", StringArgumentType.greedyString())
                         .executes(wrap(ctx -> {
                             final GHIssue issue = ctx.getSource().issue();
                             final GHUser author = issue.getUser();
-                            final GHTeam team = ctx.getArgument("team", GHTeam.class);
+                            final GHTeam team = ctx.getSource().gitHub()
+                                    .getOrganization(issue.getRepository().getOwnerName())
+                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team")).trim());
 
                             // We don't want to assign the PR author to their own PR
                             issue.setAssignees(team.getMembers().stream()
@@ -62,6 +64,10 @@ public class PRManagementCommands {
                             Label.ASSIGNED.addAndIgnore(issue);
                             Label.TRIAGE.removeAndIgnore(issue);
                         }))));
+    }
+
+    private static String parseTeam(String input) {
+        return input.substring(input.lastIndexOf("/") + 1).toLowerCase(Locale.ROOT);
     }
 
 }

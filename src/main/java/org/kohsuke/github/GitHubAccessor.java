@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 public class GitHubAccessor {
     public static ObjectReader objectReader(GitHub gitHub) {
@@ -17,6 +18,10 @@ public class GitHubAccessor {
 
     public static void wrapUp(GHPullRequest pr, GHRepository repository) {
         pr.wrapUp(repository);
+    }
+
+    public static void wrapUp(GHIssue issue, GHRepository repository) {
+        issue.wrap(repository);
     }
 
     public static void lock(GHIssue issue, LockReason reason) throws IOException {
@@ -42,6 +47,23 @@ public class GitHubAccessor {
                 .with("query", query.formatted(args))
                 .withUrlPath("/graphql")
                 .fetch(JsonNode.class);
+    }
+
+    public static IssueEdit edit(GHIssue issue) {
+        final Requester request = issue.root().createRequest().method("PATCH")
+                .inBody().withUrlPath(issue.getApiRoute());
+        return new IssueEdit() {
+            @Override
+            public IssueEdit edit(String key, Object value) {
+                request.with(key, value);
+                return this;
+            }
+
+            @Override
+            public void send() throws IOException {
+                request.send();
+            }
+        };
     }
 
     public static void minimize(GHIssueComment comment, ReportedContentClassifiers reason) throws IOException {
@@ -76,5 +98,11 @@ public class GitHubAccessor {
                 .withUrlPath(pr.getApiRoute())
                 .withHeader("Accept", "application/vnd.github.v3.diff")
                 .fetchStream(input -> new String(input.readAllBytes()));
+    }
+
+    public interface IssueEdit {
+        IssueEdit edit(String key, Object value);
+
+        void send() throws IOException;
     }
 }

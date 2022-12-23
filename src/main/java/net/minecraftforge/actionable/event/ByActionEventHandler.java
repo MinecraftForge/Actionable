@@ -34,6 +34,7 @@ public abstract class ByActionEventHandler<T extends Record> implements EventHan
         if (handler != null) {
             final GitHub gitHub = gitHubGetter.get();
             final T payloadT = Jsons.read(GitHubAccessor.objectReader(gitHub), payload, payloadType);
+            preAction.accept(payloadT);
             handler.handle(
                     gitHub, payloadT, payload
             );

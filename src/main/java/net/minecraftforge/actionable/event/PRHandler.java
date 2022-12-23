@@ -80,6 +80,10 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 if (prFullVersion.length < 2) return;
                 final String prVersion = prFullVersion[0] + "." + prFullVersion[1];
                 GitHubAccessor.addLabel(pullRequest, prVersion);
+
+                if (!GithubVars.LATEST_VERSION.get().isBlank() && !GithubVars.LATEST_VERSION.get().equals(prVersion)) {
+                    Label.LTS_BACKPORT.add(pullRequest);
+                }
             }
         });
         steps.add(() -> {

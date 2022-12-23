@@ -11,6 +11,7 @@ import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueComment;
+import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 import org.kohsuke.github.ReactionContent;
@@ -23,6 +24,8 @@ public record CommandManager(Set<String> prefixes, boolean allowEdits, GitHub gi
         final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
 
         final GHIssue issue = reader.forType(GHIssue.class).readValue(payload.get("issue"));
+        final GHRepository repository = reader.forType(GHRepository.class).readValue(payload.get("repository"));
+        GitHubAccessor.wrapUp(issue, repository);
         final GHIssueComment comment = reader.forType(GHIssueComment.class).readValue(payload.get("comment"));
         GitHubAccessor.wrapUp(comment, issue);
         final Action action = Action.get(payload);

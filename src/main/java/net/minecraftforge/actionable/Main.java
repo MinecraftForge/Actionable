@@ -6,6 +6,7 @@ import net.minecraftforge.actionable.event.EventHandler;
 import net.minecraftforge.actionable.event.IssueCommentHandler;
 import net.minecraftforge.actionable.event.PRHandler;
 import net.minecraftforge.actionable.event.PRReviewHandler;
+import net.minecraftforge.actionable.event.PushHandler;
 import net.minecraftforge.actionable.util.AuthUtil;
 import net.minecraftforge.actionable.util.GitHubEvent;
 import net.minecraftforge.actionable.util.GithubVars;
@@ -39,7 +40,7 @@ public record Main(
         final Map<GitHubEvent, Supplier<EventHandler>> handlers = new EnumMap<>(GitHubEvent.class);
 
         {
-            handlers.put(PUSH, PushAction::new);
+            handlers.put(PUSH, PushHandler::new);
             handlers.put(ISSUE_COMMENT, IssueCommentHandler::new);
             handlers.put(PULL_REQUEST, PRHandler::new);
             handlers.put(PULL_REQUEST_REVIEW, PRReviewHandler::new);

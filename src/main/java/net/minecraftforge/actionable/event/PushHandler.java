@@ -1,8 +1,8 @@
-package net.minecraftforge.actionable;
+package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
-import net.minecraftforge.actionable.event.EventHandler;
+import net.minecraftforge.actionable.Main;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
@@ -23,11 +23,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-public class PushAction implements EventHandler {
+public class PushHandler implements EventHandler {
     private static final String LABEL_NAME = "Needs Rebase";
-    private static final long PR_BASE_TIME = 30 + 60; // 1.5 seconds
+    private static final long PR_BASE_TIME = 3;
     private static final ScheduledThreadPoolExecutor SERVICE = new ScheduledThreadPoolExecutor(1, run -> new Thread(run, "Conflict Checker")); // Non - daemon
 
     static {

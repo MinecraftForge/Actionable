@@ -1,7 +1,6 @@
 package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import net.minecraftforge.actionable.PushAction;
 import net.minecraftforge.actionable.util.DiffUtils;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
@@ -63,7 +62,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
         final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> payload.organization
                 .getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
                 .getMembers());
-        PushAction.checkConflict(triagers, gitHub, json);
+        PushHandler.checkConflict(triagers, gitHub, json);
     }
 
     private static void onCreate(GitHub gitHub, Payload payload, JsonNode $) throws IOException {

@@ -10,9 +10,15 @@ public enum Action {
     EDITED,
     SUBMITTED,
     READY_FOR_REVIEW,
-    SYNCHRONIZE;
+    SYNCHRONIZE,
+
+    UNKNOWN;
 
     public static Action get(JsonNode payload) {
-        return valueOf(payload.get("action").asText().toUpperCase(Locale.ROOT));
+        try {
+            return valueOf(payload.get("action").asText().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            return UNKNOWN;
+        }
     }
 }

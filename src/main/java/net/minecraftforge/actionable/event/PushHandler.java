@@ -7,6 +7,7 @@ import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
+import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.MergeableState;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHPullRequest;
@@ -25,7 +26,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class PushHandler implements EventHandler {
-    private static final String LABEL_NAME = "Needs Rebase";
     private static final long PR_BASE_TIME = 3;
     private static final ScheduledThreadPoolExecutor SERVICE = new ScheduledThreadPoolExecutor(1, run -> new Thread(run, "Conflict Checker")); // Non - daemon
 
@@ -84,9 +84,10 @@ public class PushHandler implements EventHandler {
             }, PR_BASE_TIME * unknownAmount, TimeUnit.SECONDS);
         }
 
-        final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> gitHub.getOrganization(repository.getOwnerName())
-                .getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
-                .getMembers());
+        final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() ->
+                RepoConfig.INSTANCE.triage() == null ? Set.of() : gitHub.getOrganization(repository.getOwnerName())
+                    .getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
+                    .getMembers());
         for (int i = 0; i < nodes.size(); i++) {
             checkConflict(triagers, gitHub, nodes.get(i));
         }
@@ -101,7 +102,7 @@ public class PushHandler implements EventHandler {
     }
 
     public static void checkConflict(FunctionalInterfaces.SupplierException<Set<GHUser>> triagers, GitHub gitHub, JsonNode node) throws IOException {
-        final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equalsIgnoreCase(LABEL_NAME));
+        final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equalsIgnoreCase(Label.NEEDS_REBASE.getLabelName()));
         System.out.println("Has label: " + hasLabel);
         final MergeableState state = MergeableState.valueOf(node.get("mergeable").asText());
         System.out.println("Has state: " + state);
@@ -113,7 +114,7 @@ public class PushHandler implements EventHandler {
         final GHPullRequest pr = repo.getPullRequest(number);
         if (hasLabel && state == MergeableState.MERGEABLE) {
             // We don't have conflicts but the PR has the label... remove it.
-            pr.removeLabel(LABEL_NAME);
+            Label.NEEDS_REBASE.removeAndIgnore(pr);
 
             final List<GHUser> toRequest = new ArrayList<>();
             for (final GHPullRequestReview review : pr.listReviews()) {
@@ -122,9 +123,9 @@ public class PushHandler implements EventHandler {
                 }
             }
             if (!toRequest.isEmpty()) pr.requestReviewers(toRequest);
-        } else if (state == MergeableState.CONFLICTING && pr.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(LABEL_NAME))) {
+        } else if (state == MergeableState.CONFLICTING && pr.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(Label.NEEDS_REBASE.getLabelName()))) {
             // We have conflicts but the PR doesn't have the label... add it.
-            pr.addLabels(LABEL_NAME);
+            Label.NEEDS_REBASE.addAndIgnore(pr);
 
             // Clear assignees
             pr.setAssignees(List.of());

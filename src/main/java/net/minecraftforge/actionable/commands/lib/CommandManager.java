@@ -6,6 +6,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
@@ -17,9 +18,8 @@ import org.kohsuke.github.GitHubAccessor;
 import org.kohsuke.github.ReactionContent;
 
 import java.io.IOException;
-import java.util.Set;
 
-public record CommandManager(Set<String> prefixes, boolean allowEdits, GitHub gitHub, CommandDispatcher<GHCommandContext> dispatcher) {
+public record CommandManager(RepoConfig.Commands config, GitHub gitHub, CommandDispatcher<GHCommandContext> dispatcher) {
     public void run(JsonNode payload) throws IOException {
         final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
 
@@ -46,8 +46,10 @@ public record CommandManager(Set<String> prefixes, boolean allowEdits, GitHub gi
         try {
             final int result = dispatcher.execute(results);
             if (result == Command.SINGLE_SUCCESS) {
-                FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.ROCKET));
-                if (command.commentOnlyCommand()) {
+                if (config.reactToComment()) {
+                    FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.ROCKET));
+                }
+                if (command.commentOnlyCommand() && config.minimizeComment()) {
                     FunctionalInterfaces.ignoreExceptions(() -> GitHubAccessor.minimize(comment, ReportedContentClassifiers.RESOLVED));
                 }
             }
@@ -62,7 +64,9 @@ public record CommandManager(Set<String> prefixes, boolean allowEdits, GitHub gi
                 )));
             }
 
-            FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.CONFUSED));
+            if (config.reactToComment()) {
+                FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.CONFUSED));
+            }
 
             System.exit(1);
         }
@@ -70,14 +74,14 @@ public record CommandManager(Set<String> prefixes, boolean allowEdits, GitHub gi
 
     public boolean shouldRunForEvent(final Action action) {
         if (action == Action.CREATED) return true;
-        if (action == Action.EDITED) return allowEdits;
+        if (action == Action.EDITED) return config.allowEdits();
         return false;
     }
 
     public CommandData findCommand(String comment) {
         boolean commentOnlyCommand = false;
         String command = null;
-        for (final var prefix : this.prefixes) {
+        for (final String prefix : config.prefixes()) {
             System.out.println("Checking for commands with prefix '" + prefix + "'");
             if (comment.startsWith(prefix)) {
                 // If at the start, consider the entire comment a command

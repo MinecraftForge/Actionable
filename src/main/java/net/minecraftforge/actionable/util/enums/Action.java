@@ -12,6 +12,7 @@ public enum Action {
     READY_FOR_REVIEW,
     SYNCHRONIZE,
     LABELED,
+    UNLABELED,
 
     UNKNOWN;
 

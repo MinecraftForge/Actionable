@@ -3,7 +3,6 @@ package net.minecraftforge.actionable.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
-import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Label;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHPermissionType;
@@ -18,13 +17,13 @@ import java.util.function.Predicate;
 
 import static net.minecraftforge.actionable.commands.Commands.argument;
 import static net.minecraftforge.actionable.commands.Commands.hasPermission;
-import static net.minecraftforge.actionable.commands.Commands.isInTeam;
+import static net.minecraftforge.actionable.commands.Commands.isTriage;
 import static net.minecraftforge.actionable.commands.Commands.literal;
 import static net.minecraftforge.actionable.util.FunctionalInterfaces.wrap;
 
 public class PRManagementCommands {
     public static void register(GitHub gh, CommandDispatcher<GHCommandContext> dispatcher) {
-        final Predicate<GHCommandContext> canManage = isInTeam(GithubVars.TRIAGE_TEAM.get()).or(hasPermission(GHPermissionType.WRITE));
+        final Predicate<GHCommandContext> canManage = isTriage().or(hasPermission(GHPermissionType.WRITE));
 
         dispatcher.register(literal("shipit")
                 .requires(hasPermission(GHPermissionType.WRITE).and(ctx -> ctx.issue().isPullRequest()))

@@ -5,25 +5,9 @@ inputs:
     required: true
   gh_app_name:
     required: true
-  command_prefixes:
-    default: '/'
-  allow_commands_in_edits:
-    default: 'false'
-  triage_team:
-    default: 'triage'
-  triage_project:
-    default: '4'
-  labels_to_teams:
-    default: 'default -> api'
-  latest_version:
-    default: ''
-  forum_label:
-    default: 'Forum'
-  spam_label:
-    default: 'Spam'
+  config_directory:
+    required: true
 
 runs:
   using: 'docker'
   image: 'Dockerfile'
-  args:
-    - ${{ inputs.gh_app_key }} ${{ inputs.gh_app_name }} ${{ inputs.command_prefixes }}

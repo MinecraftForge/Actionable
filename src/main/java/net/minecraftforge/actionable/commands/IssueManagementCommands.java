@@ -15,12 +15,16 @@ import org.kohsuke.github.LockReason;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import static net.minecraftforge.actionable.util.FunctionalInterfaces.*;
-import static net.minecraftforge.actionable.commands.Commands.*;
+import static net.minecraftforge.actionable.commands.Commands.argument;
+import static net.minecraftforge.actionable.commands.Commands.hasPermission;
+import static net.minecraftforge.actionable.commands.Commands.isTriage;
+import static net.minecraftforge.actionable.commands.Commands.literal;
+import static net.minecraftforge.actionable.commands.Commands.randomHex;
+import static net.minecraftforge.actionable.util.FunctionalInterfaces.wrap;
 
 public class IssueManagementCommands {
     public static void register(GitHub gh, CommandDispatcher<GHCommandContext> dispatcher) {
-        final Predicate<GHCommandContext> canManage = isInTeam(GithubVars.TRIAGE_TEAM.get()).or(hasPermission(GHPermissionType.WRITE));
+        final Predicate<GHCommandContext> canManage = isTriage().or(hasPermission(GHPermissionType.WRITE));
 
         dispatcher.register(literal("lock")
                 .requires(canManage)

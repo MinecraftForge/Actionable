@@ -1,6 +1,7 @@
 /build/
 .idea/
 .gradle/
+Tests/
 
 .env
 Tests/

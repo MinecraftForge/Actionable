@@ -47,6 +47,17 @@ public class FunctionalInterfaces {
         };
     }
 
+    public static <T> Supplier<T> memoizeSup(Supplier<T> supplier) {
+        return new Supplier<>() {
+            T value;
+            @Override
+            public T get() {
+                if (value == null) value = supplier.get();
+                return value;
+            }
+        };
+    }
+
     public interface ConsException<T> {
         void accept(T t) throws Exception;
     }

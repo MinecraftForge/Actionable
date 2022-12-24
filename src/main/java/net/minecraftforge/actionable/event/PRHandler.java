@@ -3,9 +3,9 @@ package net.minecraftforge.actionable.event;
 import com.fasterxml.jackson.databind.JsonNode;
 import net.minecraftforge.actionable.util.DiffUtils;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
-import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
+import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHOrganization;
@@ -30,12 +30,15 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                         .register(Action.OPENED, PRHandler::onCreate)
                         .register(Action.SYNCHRONIZE, PRHandler::onSync)
                         .register(Action.READY_FOR_REVIEW, (gitHub, payload, payloadJson) -> {
-                            final GHTeam team = payload.organization.getTeamBySlug(GithubVars.TRIAGE_TEAM.get());
+                            if (RepoConfig.INSTANCE.triage() == null) return;
+                            final GHTeam team = payload.organization.getTeamBySlug(RepoConfig.INSTANCE.triage().teamName());
                             if (!payload.pull_request.getRequestedTeams().contains(team)) {
                                 payload.pull_request.requestTeamReviewers(List.of(team));
                             }
                         })
-                        .register(Action.LABELED, IssueHandler::onSpamLabel)
+
+                        .register(Action.LABELED, IssueHandler::onLabelLock)
+                        .register(Action.UNLABELED, IssueHandler::onLabelLockRemove)
         );
     }
 
@@ -66,9 +69,10 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 }""", payload.repository.getOwnerName(), payload.repository.getName(), payload.pull_request.getNumber());
 
         final JsonNode json = Jsons.at(queryJson, "data.repository.pullRequest");
-        final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() -> payload.organization
-                .getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
-                .getMembers());
+        final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() ->
+                RepoConfig.INSTANCE.triage() == null ? Set.of() : payload.organization
+                    .getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
+                    .getMembers());
         PushHandler.checkConflict(triagers, gitHub, json);
     }
 
@@ -88,7 +92,8 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 final String prVersion = prFullVersion[0] + "." + prFullVersion[1];
                 GitHubAccessor.addLabel(pullRequest, prVersion);
 
-                if (!GithubVars.LATEST_VERSION.get().isBlank() && !GithubVars.LATEST_VERSION.get().equals(prVersion)) {
+                final String name = RepoConfig.INSTANCE.labels().getOrDefault(Label.LATEST.getId(), "");
+                if (!name.isBlank() && !name.equals(prVersion)) {
                     Label.LTS_BACKPORT.add(pullRequest);
                 }
             }
@@ -105,11 +110,13 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
             }
         });
 
-        if (!pullRequest.isDraft()) steps.add(() -> pullRequest.requestTeamReviewers(List.of(
-                organization.getTeamBySlug(GithubVars.TRIAGE_TEAM.get())
-        )));
+        if (RepoConfig.INSTANCE.triage() != null) {
+            if (!pullRequest.isDraft()) steps.add(() -> pullRequest.requestTeamReviewers(List.of(
+                    organization.getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
+            )));
 
-        steps.add(() -> addToProject(gitHub, organization, GithubVars.TRIAGE_PROJECT.get(), pullRequest));
+            steps.add(() -> addToProject(gitHub, organization, RepoConfig.INSTANCE.triage().projectId(), pullRequest));
+        }
 
         steps.forEach(runnable -> {
             try {

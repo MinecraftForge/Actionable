@@ -1,9 +1,9 @@
 package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Or;
+import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHOrganization;
@@ -14,40 +14,54 @@ import org.kohsuke.github.GitHubAccessor;
 import org.kohsuke.github.LockReason;
 
 import java.io.IOException;
+import java.util.Locale;
 
 public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
 
-    @SuppressWarnings("unchecked")
     public IssueHandler() {
         super(
                 Payload.class, payload -> GitHubAccessor.wrapUp(payload.issue, payload.repository),
                 payloadRegistrar -> payloadRegistrar
-                        .register(Action.LABELED, IssueHandler::onLabeled, IssueHandler::onSpamLabel)
+                        .register(Action.LABELED, IssueHandler::onLabelLock)
+                        .register(Action.UNLABELED, IssueHandler::onLabelLockRemove)
         );
     }
 
-    private static void onLabeled(GitHub gitHub, Payload payload, JsonNode payloadJson) throws IOException {
-        if (Jsons.at(payloadJson, "label.name").asText().equalsIgnoreCase(GithubVars.FORUM_LABEL.get())) {
-            payload.issue.comment("""
-                    :wave: We use the issue tracker exclusively for final bug reports and feature requests.  
-                    However, this issue appears to be better suited for the [Forge Support Forums](https://forums.minecraftforge.net/) or [Forge Discord](https://discord.gg/UvedJ9m).  
-                    Please create a new topic on the support forum with this issue or ask in the `#tech-support` channel in the Discord server, and the conversation can continue there.""".trim());
+    public static void onLabelLock(GitHub gitHub, IssuePayload payload, JsonNode payloadJson) throws IOException {
+        final RepoConfig.LabelLock lock = RepoConfig.INSTANCE.labelLocks().get(Jsons.at(payloadJson, "label.name").asText());
+        if (lock == null) return;
+
+        if (lock.message() != null) {
+            payload.issue().comment(lock.message());
+        }
+
+        GitHubAccessor.edit(payload.issue())
+                .edit("state", "closed")
+                .edit("state_reason", "not_planned")
+                .send();
+
+        if (lock.close()) {
             GitHubAccessor.edit(payload.issue())
                     .edit("state", "closed")
                     .edit("state_reason", "not_planned")
                     .send();
-            payload.issue.lock();
+        }
+
+        if (lock.lock()) {
+            if (lock.lockReason() == null) {
+                payload.issue().lock();
+            } else {
+                GitHubAccessor.lock(payload.issue(), LockReason.valueOf(lock.lockReason().toUpperCase(Locale.ROOT)));
+            }
         }
     }
 
-    public static void onSpamLabel(GitHub gitHub, IssuePayload payload, JsonNode payloadJson) throws IOException {
-        if (Jsons.at(payloadJson, "label.name").asText().equalsIgnoreCase(GithubVars.SPAM_LABEL.get())) {
-            GitHubAccessor.edit(payload.issue())
-                    .edit("state", "closed")
-                    .edit("state_reason", "not_planned")
-                    .send();
-            GitHubAccessor.lock(payload.issue(), LockReason.SPAM);
-        }
+    public static void onLabelLockRemove(GitHub gitHub, IssuePayload payload, JsonNode payloadJson) throws IOException {
+        final RepoConfig.LabelLock lock = RepoConfig.INSTANCE.labelLocks().get(Jsons.at(payloadJson, "label.name").asText());
+        if (lock == null) return;
+
+        if (lock.lock()) payload.issue().unlock();
+        if (lock.close()) payload.issue().reopen();
     }
 
     public record Payload(@Or(fieldName = "pull_request", type = GHPullRequest.class) GHIssue issue, GHRepository repository, GHOrganization organization) implements IssuePayload {}

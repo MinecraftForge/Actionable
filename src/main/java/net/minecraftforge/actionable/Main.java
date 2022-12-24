@@ -11,6 +11,7 @@ import net.minecraftforge.actionable.event.PushHandler;
 import net.minecraftforge.actionable.util.AuthUtil;
 import net.minecraftforge.actionable.util.GitHubEvent;
 import net.minecraftforge.actionable.util.GithubVars;
+import net.minecraftforge.actionable.util.RepoConfig;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
 import org.kohsuke.github.authorization.AuthorizationProvider;
@@ -25,6 +26,7 @@ import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -52,10 +54,17 @@ public record Main(
         new Main(handlers).run();
     }
 
+    public record Thingy(RepoConfig.TeamLike team) {}
+    public record ThingyNested(Thingy thingy) {}
+
     public void run() throws Throwable {
         final Supplier<EventHandler> handler = eventHandlers.get(GithubVars.EVENT.get());
         if (handler != null) {
-            handler.get().handle(this::buildApi, this.payload());
+            handler.get().handle(GitHubGetter.memoize(() -> {
+                final GitHub gh = buildApi();
+                setupConfig(gh);
+                return gh;
+            }), this.payload());
         }
     }
 
@@ -72,6 +81,22 @@ public record Main(
                 .build();
     }
 
+    private void setupConfig(GitHub gitHub) throws IOException {
+        final RepoConfig.ConfigLocation location = GithubVars.CONFIG_DIRECTORY.get();
+        final RepoConfig unsanitized = RepoConfig.getOrCommit(
+                gitHub.getRepository(location.repository()),
+                location.directory(), location.branch(),
+                GithubVars.REPOSITORY.get()
+        );
+        RepoConfig.INSTANCE = new RepoConfig(
+                unsanitized.labels() == null ? Map.of() : unsanitized.labels(),
+                unsanitized.labelLocks() == null ? Map.of() : unsanitized.labelLocks(),
+                unsanitized.triage(),
+                unsanitized.labelTeams() == null ? new LinkedHashMap<>() : unsanitized.labelTeams(),
+                unsanitized.commands()
+        );
+    }
+
     private JsonNode payload() throws IOException {
         try (final InputStream in = Files.newInputStream(Path.of(GithubVars.EVENT_PATH.get()))) {
             return new ObjectMapper().readTree(in);
@@ -80,5 +105,16 @@ public record Main(
 
     public interface GitHubGetter {
         GitHub get() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException;
+
+        static GitHubGetter memoize(GitHubGetter getter) {
+            return new GitHubGetter() {
+                GitHub gh;
+                @Override
+                public GitHub get() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+                    if (gh == null) gh = getter.get();
+                    return gh;
+                }
+            };
+        }
     }
 }

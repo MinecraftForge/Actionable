@@ -12,35 +12,47 @@ The App ID of the bot application. - <font color=red>*Required*</font>
 
 The Private Key of the bot application. (in `PKCS1` or `PKCS8` format) - <font color=red>*Required*</font>
 
-### `command_prefixes`
+### `config_directory`
 
-A command-separated list of prefixes to use for commands.  
-Default value: `command_prefixes`
+The configuration directory in which the configuration(s) for the action lies. - <font color=red>*Required*</font>  
+Format: `Org/RepoName:directory@main`  
+Example: for the directory `ForgeForce/ActionsStore:configs@main`, the configuration for the `ForgeForce/ActionsTest` repository
+will be in the `ForgeForce/ActionsStore` repository, at `configs/ForgeForce/ActionsTest.yml`, on the `main` branch.
 
-### `allow_commands_in_edits`
+### Configuration File
+```yaml
+labels: # A map of label ID -> label name
+  feature: "Feature"
+  latest: "1.19" # The `latest` label is special, and represents the latest version of Minecraft. When a new PR targeted for a version which is not this version is created, the `lts` label will be added.
 
-If commands should be run from edited comments.  
-Default value: `false`
+labelLocks: # A map of label name -> lock behaviour
+  Forum:
+    lock: true # If this label should lock the issue
+    lockReason: "spam" # If `lock` is true, the reason for locking the issue
+    close: true # If this label should close the issue as not planned
+    message: |- # An optional message to send before closing / locking the issue
+      :wave: We use the issue tracker exclusively for final bug reports and feature requests.
+      However, this issue appears to be better suited for the [Forge Support Forums](https://forums.minecraftforge.net/) or [Forge Discord](https://discord.gg/UvedJ9m).
+      Please create a new topic on the support forum with this issue or ask in the `#tech-support` channel in the Discord server, and the conversation can continue there.
 
-### `triage_team`
+triage: # Optional triage information
+  teamName: "test-team" # The name of the triage team. This team will have permission to run issue management commands
+  projectId: 4 # The ID of the private PR Triage Tracking project. This value, is for example, the `4` in `https://github.com/orgs/MinecraftForge/projects/4`
 
-The name of the triage team.  
-Default value: `triage`
+labelTeams: # Label -> PR assignment team information
+  default: # The "fallback" team, if the PR doesn't have any of the other labels
+  # The value can either be a list of users, or a string, representing a team
+  - "TheCurle"
+  - "sciwhiz12"
+  Rendering: "test-team"
+  LTS Backport:
+  - "AterAnimAvis"
 
-### `triage_project`
-
-The ID of the triage PR Management project.  
-The ID is represented by the `4` in the following project URL: `https://github.com/orgs/MinecraftForge/projects/4/`  
-Default value: `4`
-
-### `labels_to_teams`
-
-This value holds the teams which should be assigned to PRs, depending on the PR's label.  
-The syntax is: command-separated `key -> value` pairs. The key
-is represented by the label (`default` being the fallback), and the value
-is the team to assign. It can be either a normal string (a team, like `rendering`), 
-a list of users seperated by a `+` (e.g. `TheCurle + LexManos`) or a single person (e.g. `u:TheCurle`).  
-Default value: `default -> api`
-
-### `latest_version`
-The latest MC version. All PRs which are opened with a version tag which isn't this version will have the `LTS Backport` label added.
+commands: # Optional information used by commands
+  prefixes: # A list of command prefixes
+  - "/"
+  - "@forgeforce-bot "
+  allowEdits: false # If commands should be run from edited comments
+  minimizeComment: true # If command-only comments should be minimized after the command is successfully run
+  reactToComment: true # If comments should be reacted to with either 🚀 or 😕 depending on the result of the command
+```

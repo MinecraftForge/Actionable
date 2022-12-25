@@ -6,6 +6,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
@@ -17,25 +18,21 @@ import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 import org.kohsuke.github.ReactionContent;
 
-import java.io.IOException;
-
 public record CommandManager(RepoConfig.Commands config, GitHub gitHub, CommandDispatcher<GHCommandContext> dispatcher) {
-    public void run(JsonNode payload) throws IOException {
-        final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
-
-        final GHIssue issue = reader.forType(GHIssue.class).readValue(payload.get("issue"));
-        final GHRepository repository = reader.forType(GHRepository.class).readValue(payload.get("repository"));
-        GitHubAccessor.wrapUp(issue, repository);
-        final GHIssueComment comment = reader.forType(GHIssueComment.class).readValue(payload.get("comment"));
-        GitHubAccessor.wrapUp(comment, issue);
+    public void run(JsonNode payload) throws Throwable {
         final Action action = Action.get(payload);
-
         if (!this.shouldRunForEvent(action)) return;
 
-        final CommandData command = findCommand(comment.getBody());
+        final CommandData command = findCommand(Jsons.at(payload, "comment.body").asText());
         if (command == null) return;
 
-        final GHCommandContext ctx = new GHCommandContext(gitHub, comment, issue, payload);
+        final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
+
+        final Payload pl = Jsons.read(reader, payload, Payload.class);
+        GitHubAccessor.wrapUp(pl.issue, pl.repository);
+        GitHubAccessor.wrapUp(pl.comment, pl.issue);
+
+        final GHCommandContext ctx = new GHCommandContext(gitHub, pl.comment, pl.issue, payload);
         final ParseResults<GHCommandContext> results = dispatcher.parse(command.command(), ctx);
 
         // If the command does not fully parse, then return
@@ -47,10 +44,10 @@ public record CommandManager(RepoConfig.Commands config, GitHub gitHub, CommandD
             final int result = dispatcher.execute(results);
             if (result == Command.SINGLE_SUCCESS) {
                 if (config.reactToComment()) {
-                    FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.ROCKET));
+                    FunctionalInterfaces.ignoreExceptions(() -> pl.comment.createReaction(ReactionContent.ROCKET));
                 }
                 if (command.commentOnlyCommand() && config.minimizeComment()) {
-                    FunctionalInterfaces.ignoreExceptions(() -> GitHubAccessor.minimize(comment, ReportedContentClassifiers.RESOLVED));
+                    FunctionalInterfaces.ignoreExceptions(() -> GitHubAccessor.minimize(pl.comment, ReportedContentClassifiers.RESOLVED));
                 }
             }
         } catch (Exception e) {
@@ -59,13 +56,13 @@ public record CommandManager(RepoConfig.Commands config, GitHub gitHub, CommandD
 
             if (e instanceof CommandSyntaxException exception) {
                 //noinspection deprecation
-                FunctionalInterfaces.ignoreExceptions(() -> issue.comment("@%s, I encountered an exception executing that command: %s".formatted(
-                        comment.getUserName(), exception.getMessage()
+                FunctionalInterfaces.ignoreExceptions(() -> pl.issue.comment("@%s, I encountered an exception executing that command: %s".formatted(
+                        pl.comment.getUserName(), exception.getMessage()
                 )));
             }
 
             if (config.reactToComment()) {
-                FunctionalInterfaces.ignoreExceptions(() -> comment.createReaction(ReactionContent.CONFUSED));
+                FunctionalInterfaces.ignoreExceptions(() -> pl.comment.createReaction(ReactionContent.CONFUSED));
             }
 
             System.exit(1);
@@ -108,4 +105,5 @@ public record CommandManager(RepoConfig.Commands config, GitHub gitHub, CommandD
 
     public record CommandData(boolean commentOnlyCommand, String command) {}
 
+    public record Payload(GHIssue issue, GHRepository repository, GHIssueComment comment) {}
 }

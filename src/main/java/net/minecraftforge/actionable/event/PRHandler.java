@@ -7,6 +7,7 @@ import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
+import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHOrganization;
 import org.kohsuke.github.GHPullRequest;
@@ -85,17 +86,21 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
 
         steps.add(() -> Label.TRIAGE.add(pullRequest));
         steps.add(() -> {
-            final String prTitle = pullRequest.getTitle();
-            if (prTitle.startsWith("[") && prTitle.contains("]")) {
-                final String[] prFullVersion = prTitle.substring(1, prTitle.indexOf("]")).split("\\.");
-                if (prFullVersion.length < 2) return;
-                final String prVersion = prFullVersion[0] + "." + prFullVersion[1];
-                GitHubAccessor.addLabel(pullRequest, prVersion);
-
-                final String name = RepoConfig.INSTANCE.labels().getOrDefault(Label.LATEST.getId(), "");
-                if (!name.isBlank() && !name.equals(prVersion)) {
-                    Label.LTS_BACKPORT.add(pullRequest);
+            final String prVersion = getPRVersion(pullRequest);
+            if (prVersion != null) {
+                final String latestLabel = RepoConfig.INSTANCE.labels().get(Label.LATEST.getId());
+                if (latestLabel != null) {
+                    if (!latestLabel.equals(prVersion)) {
+                        Label.LTS_BACKPORT.addAndIgnore(pullRequest);
+                    }
+                } else if (payload.repository.getDefaultBranch() != null) {
+                    // If there's no latest label configured, assume that everything which ISN'T targeted to the default branch is an LTS Backport
+                    final String latest = getMajorVersionFrom(payload.repository.getDefaultBranch());
+                    if (latest != null && !latest.equals(prVersion)) {
+                        Label.LTS_BACKPORT.addAndIgnore(pullRequest);
+                    }
                 }
+                GitHubAccessor.addLabel(pullRequest, prVersion);
             }
         });
         steps.add(() -> {
@@ -151,5 +156,27 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
             }""",
             projectId, pullRequest.getNodeId()
         );
+    }
+
+    @Nullable
+    private static String getPRVersion(GHPullRequest pullRequest) {
+        final String prTitle = pullRequest.getTitle();
+        final String[] prFullVersion;
+        if (prTitle.startsWith("[") && prTitle.contains("]")) {
+            prFullVersion = prTitle.substring(1, prTitle.indexOf("]")).split("\\.");
+        } else {
+            prFullVersion = pullRequest.getBase().getRef().split("\\.");
+        }
+        if (prFullVersion.length >= 2) {
+            return prFullVersion[0] + "." + prFullVersion[1];
+        }
+        return null;
+    }
+
+    @Nullable
+    private static String getMajorVersionFrom(String version) {
+        final String[] spl = version.split("\\.");
+        if (spl.length >= 2) return spl[0] + spl[1];
+        return null;
     }
 }

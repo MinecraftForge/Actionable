@@ -35,11 +35,6 @@ public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
             payload.issue().comment(lock.message());
         }
 
-        GitHubAccessor.edit(payload.issue())
-                .edit("state", "closed")
-                .edit("state_reason", "not_planned")
-                .send();
-
         if (lock.close()) {
             GitHubAccessor.edit(payload.issue())
                     .edit("state", "closed")

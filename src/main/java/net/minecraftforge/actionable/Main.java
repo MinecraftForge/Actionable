@@ -2,6 +2,7 @@ package net.minecraftforge.actionable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import net.minecraftforge.actionable.event.EventHandler;
 import net.minecraftforge.actionable.event.IssueCommentHandler;
 import net.minecraftforge.actionable.event.IssueHandler;
@@ -11,10 +12,14 @@ import net.minecraftforge.actionable.event.PushHandler;
 import net.minecraftforge.actionable.util.AuthUtil;
 import net.minecraftforge.actionable.util.GitHubEvent;
 import net.minecraftforge.actionable.util.GithubVars;
+import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.RepoConfig;
+import org.kohsuke.github.GHArtifact;
 import org.kohsuke.github.GitHub;
+import org.kohsuke.github.GitHubAccessor;
 import org.kohsuke.github.GitHubBuilder;
 import org.kohsuke.github.authorization.AuthorizationProvider;
+import org.kohsuke.github.function.InputStreamFunction;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,11 +34,13 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.zip.ZipInputStream;
 
 import static net.minecraftforge.actionable.util.GitHubEvent.ISSUES;
 import static net.minecraftforge.actionable.util.GitHubEvent.ISSUE_COMMENT;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_REVIEW;
+import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_TARGET;
 import static net.minecraftforge.actionable.util.GitHubEvent.PUSH;
 
 public record Main(
@@ -47,7 +54,7 @@ public record Main(
             handlers.put(PUSH, PushHandler::new);
             handlers.put(ISSUES, IssueHandler::new);
             handlers.put(ISSUE_COMMENT, IssueCommentHandler::new);
-            handlers.put(PULL_REQUEST, PRHandler::new);
+            handlers.put(PULL_REQUEST_TARGET, PRHandler::new);
             handlers.put(PULL_REQUEST_REVIEW, PRReviewHandler::new);
         }
 
@@ -63,14 +70,43 @@ public record Main(
             return;
         }
 
-        final Supplier<EventHandler> handler = eventHandlers.get(GithubVars.EVENT.get());
-        if (handler != null) {
-            handler.get().handle(GitHubGetter.memoize(() -> {
+        final GitHubEvent event = GithubVars.EVENT.get();
+
+        if (event == GitHubEvent.WORKFLOW_RUN) { // In the case of WORKFLOW_RUN, we need to simulate the payload
+            final JsonNode payload = payload();
+            final JsonNode run = payload.get("workflow_run");
+
+            final Supplier<EventHandler> handler = eventHandlers.get(GitHubEvent.BY_ID.get(run.get("event").asText()));
+            if (handler != null && run.get("conclusion").asText().equals("success")) {
+                final long id = run.get("id").asLong();
+                System.out.println("Running as workflow " + id + "...");
                 final GitHub gh = buildApi();
-                setupConfig(gh);
-                return gh;
-            }), this.payload());
+                final GHArtifact[] artifacts = GitHubAccessor.getArtifacts(gh, GithubVars.REPOSITORY.get(), id);
+                final JsonNode actualPayload = artifacts[0].download(firstEntry(input -> new ObjectMapper().readValue(input, JsonNode.class)));
+                handler.get().handle(GitHubGetter.memoize(() -> {
+                    setupConfig(gh);
+                    return gh;
+                }), actualPayload);
+            }
+        } else {
+            final Supplier<EventHandler> handler = eventHandlers.get(event);
+            if (handler != null) {
+                handler.get().handle(GitHubGetter.memoize(() -> {
+                    final GitHub gh = buildApi();
+                    setupConfig(gh);
+                    return gh;
+                }), this.payload());
+            }
         }
+    }
+
+    private static <Z> InputStreamFunction<Z> firstEntry(InputStreamFunction<Z> fun) {
+        return input -> {
+            try (final ZipInputStream zis = new ZipInputStream(input)) {
+                zis.getNextEntry();
+                return fun.apply(zis);
+            }
+        };
     }
 
     private GitHub buildApi() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {

@@ -58,6 +58,11 @@ public record Main(
     public record ThingyNested(Thingy thingy) {}
 
     public void run() throws Throwable {
+        if (GithubVars.GH_APP_NAME.get() == null || GithubVars.GH_APP_NAME.get().isBlank() || GithubVars.GH_APP_KEY.get() == null || GithubVars.GH_APP_KEY.get().isBlank()) {
+            System.out.println("No GitHub App ID or key was provided!");
+            return;
+        }
+
         final Supplier<EventHandler> handler = eventHandlers.get(GithubVars.EVENT.get());
         if (handler != null) {
             handler.get().handle(GitHubGetter.memoize(() -> {

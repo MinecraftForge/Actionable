@@ -10,11 +10,13 @@ import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.MergeableState;
 import org.jetbrains.annotations.Nullable;
+import org.kohsuke.github.GHEvent;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHPullRequestReview;
 import org.kohsuke.github.GHPullRequestReviewState;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
+import org.kohsuke.github.GHWorkflowRun;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
@@ -42,6 +44,14 @@ public class PushHandler implements EventHandler {
         final GitHub gh = gitHubGetter.get();
         final ObjectReader reader = GitHubAccessor.objectReader(gh);
         final GHRepository repository = reader.forType(GHRepository.class).readValue(payload.get("repository"));
+        final List<GHWorkflowRun> inProgress = repository
+                .queryWorkflowRuns()
+                .branch(branch)
+                .event(GHEvent.PUSH)
+                .status(GHWorkflowRun.Status.IN_PROGRESS)
+                .list().iterator().nextPage();
+
+        if (inProgress.stream().anyMatch(it -> it.getName().equals(GithubVars.WORKFLOW.get()))) return; // Early exit if there's another push event in progress
         checkPRConflicts(gh, repository, branch);
     }
 
@@ -125,7 +135,7 @@ public class PushHandler implements EventHandler {
             if (!toRequest.isEmpty()) pr.requestReviewers(toRequest);
         } else if (state == MergeableState.CONFLICTING && pr.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(Label.NEEDS_REBASE.getLabelName()))) {
             // We have conflicts but the PR doesn't have the label... add it.
-            Label.NEEDS_REBASE.addAndIgnore(pr);
+            Label.NEEDS_REBASE.add(pr);
 
             // Clear assignees
             pr.setAssignees(List.of());

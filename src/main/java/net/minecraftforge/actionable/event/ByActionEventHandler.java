@@ -45,8 +45,16 @@ public abstract class ByActionEventHandler<T extends Record> implements EventHan
         void handle(GitHub gitHub, T payload, JsonNode payloadJson) throws Throwable;
     }
 
+    public interface JsonlessHandler<T> {
+        void handle(GitHub gitHub, T payload) throws Throwable;
+    }
+
     public interface Registrar<T> {
         Registrar<T> register(Action action, Handler<T> handler);
+
+        default Registrar<T> register(Action action, JsonlessHandler<T> handler) {
+            return register(action, (gitHub, payload, payloadJson) -> handler.handle(gitHub, payload));
+        }
 
         @SuppressWarnings("unchecked")
         default Registrar<T> register(Action action, Handler<T>... handlers) {

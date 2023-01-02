@@ -2,6 +2,7 @@ package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import net.minecraftforge.actionable.util.Jsons;
+import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.Or;
 import net.minecraftforge.actionable.util.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
@@ -22,9 +23,24 @@ public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
         super(
                 Payload.class, payload -> GitHubAccessor.wrapUp(payload.issue, payload.repository),
                 payloadRegistrar -> payloadRegistrar
+                        .register(Action.OPENED, IssueHandler::onCreate)
                         .register(Action.LABELED, IssueHandler::onLabelLock)
                         .register(Action.UNLABELED, IssueHandler::onLabelLockRemove)
         );
+    }
+
+    private static void onCreate(GitHub gitHub, Payload payload) throws IOException {
+        final String issueTitle = payload.issue.getTitle();
+        if (issueTitle.startsWith("[") && issueTitle.contains("]")) {
+            final String[] issueFullVersion = issueTitle.substring(1, issueTitle.indexOf("]")).split("\\.");
+            if (issueFullVersion.length < 2) return;
+            final String issueVersion = issueFullVersion[0] + "." + issueFullVersion[1];
+            GitHubAccessor.addLabel(payload.issue, issueVersion);
+        }
+
+        if (payload.issue.getLabels().stream().anyMatch(it -> it.getName().equalsIgnoreCase("bug"))) {
+            Label.TRIAGE.add(payload.issue);
+        }
     }
 
     public static void onLabelLock(GitHub gitHub, IssuePayload payload, JsonNode payloadJson) throws IOException {

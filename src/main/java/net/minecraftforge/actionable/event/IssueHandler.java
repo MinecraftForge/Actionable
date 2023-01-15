@@ -32,9 +32,15 @@ public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
     private static void onCreate(GitHub gitHub, Payload payload) throws IOException {
         final String issueTitle = payload.issue.getTitle();
         if (issueTitle.startsWith("[") && issueTitle.contains("]")) {
-            final String[] issueFullVersion = issueTitle.substring(1, issueTitle.indexOf("]")).split("\\.");
-            if (issueFullVersion.length < 2) return;
-            final String issueVersion = issueFullVersion[0] + "." + issueFullVersion[1];
+            final String fullVersion = issueTitle.substring(1, issueTitle.indexOf("]"));
+
+            if (fullVersion.toLowerCase(Locale.ROOT).contains("rfc")) {
+                Label.RFC.addAndIgnore(payload.issue);
+            }
+
+            final String[] fullVersionSplit = fullVersion.split("\\.");
+            if (fullVersionSplit.length < 2) return;
+            final String issueVersion = fullVersionSplit[0] + "." + fullVersionSplit[1];
             GitHubAccessor.addLabel(payload.issue, issueVersion);
         }
 

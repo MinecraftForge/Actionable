@@ -20,6 +20,7 @@ import org.kohsuke.github.GitHubAccessor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
@@ -103,6 +104,14 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 GitHubAccessor.addLabel(pullRequest, prVersion);
             }
         });
+
+        steps.add(() -> {
+            final String between = getBetweenAtStart(pullRequest.getTitle(), '[', ']');
+            if (between != null && between.toLowerCase(Locale.ROOT).contains("rfc")) {
+                Label.RFC.add(pullRequest);
+            }
+        });
+
         steps.add(() -> {
             final List<String> newFiles = DiffUtils.detectNewFiles(GitHubAccessor.getDiff(pullRequest).split("\n"));
 
@@ -110,9 +119,13 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 Label.FEATURE.addAndIgnore(pullRequest);
                 Label.NEW_EVENT.addAndIgnore(pullRequest);
             }
-            if (newFiles.stream().anyMatch(it -> it.contains("/client/") /* Check for new files in a client package in order to add the Rendering label - this isn't perfect, but it works */)) {
+
+            /*
+            Removed for now: not everything in the client package is related to rendering
+            if (newFiles.stream().anyMatch(it -> it.contains("/client/"))) {
                 Label.RENDERING.addAndIgnore(pullRequest);
             }
+            */
         });
 
         if (RepoConfig.INSTANCE.triage() != null) {
@@ -178,5 +191,13 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
         final String[] spl = version.split("\\.");
         if (spl.length >= 2) return spl[0] + spl[1];
         return null;
+    }
+
+    @Nullable
+    private static String getBetweenAtStart(String str, char start, char end) {
+        if (!str.startsWith(Character.toString(start))) return null;
+        final int endIdx = str.indexOf(end);
+        if (endIdx < 0) return null;
+        return str.substring(1, endIdx);
     }
 }

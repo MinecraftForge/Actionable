@@ -14,6 +14,7 @@ public enum Label {
     FEATURE("Feature"),
     ASSIGNED("Assigned"),
     TRIAGE("Triage"),
+    RFC("RFC"),
 
     LATEST("latest");
 

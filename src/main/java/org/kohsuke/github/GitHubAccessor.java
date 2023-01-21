@@ -7,9 +7,15 @@ import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class GitHubAccessor {
+    private static final Map<GHRepository, Set<String>> EXISTING_LABELS = new ConcurrentHashMap<>();
+
     public static ObjectReader objectReader(GitHub gitHub) {
         return GitHubClient.getMappingObjectReader(gitHub);
     }
@@ -100,9 +106,18 @@ public class GitHubAccessor {
     }
 
     public static void addLabel(GHIssue issue, String label) throws IOException {
-        if (issue.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(label))) {
+        if (issue.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(label)) &&
+            getExistingLabels(issue.getRepository()).stream().anyMatch(it -> it.equalsIgnoreCase(label))) {
             issue.addLabels(label);
         }
+    }
+
+    public static Set<String> getExistingLabels(GHRepository repository) throws IOException {
+        Set<String> ex = EXISTING_LABELS.get(repository);
+        if (ex != null) return ex;
+        ex = repository.listLabels().toList().stream().map(GHLabel::getName).collect(Collectors.toSet());
+        EXISTING_LABELS.put(repository, ex);
+        return ex;
     }
 
     public static String getDiff(GHPullRequest pr) throws IOException {

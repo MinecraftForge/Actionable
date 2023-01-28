@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
 
@@ -146,7 +148,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
         });
     }
 
-    private static void addToProject(GitHub gitHub, GHOrganization organization, int projectURL, GHPullRequest pullRequest) throws IOException {
+    static String getProjectId(GitHub gitHub, GHOrganization organization, int projectId) throws IOException {
         final JsonNode idQuery = GitHubAccessor.graphQl(gitHub, """
                 query{
                     organization(login: "%s"){
@@ -156,9 +158,12 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                     }
                   }""".formatted(
                 organization.getLogin(),
-                projectURL
+                projectId
         ));
-        final String projectId = Jsons.at(idQuery, "data.organization.projectV2.id").asText();
+        return Jsons.at(idQuery, "data.organization.projectV2.id").asText();
+    }
+
+    private static void addToProject(GitHub gitHub, GHOrganization organization, int projectURL, GHPullRequest pullRequest) throws IOException {
         GitHubAccessor.graphQl(gitHub, """
             mutation {
             addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) {
@@ -167,7 +172,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                 }
               }
             }""",
-            projectId, pullRequest.getNodeId()
+            getProjectId(gitHub, organization, projectURL), pullRequest.getNodeId()
         );
     }
 

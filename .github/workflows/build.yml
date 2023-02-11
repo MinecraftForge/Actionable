@@ -30,14 +30,11 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew shadowJar
 
-      # Node is required for npm
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-
       - name: Push changes
         run: |
+          git config --global user.email "actionable@minecraftforge.net"
+          git config --global user.name "autoforge"
+          
           git add dist/app.jar
           git commit -m "Built dist jar"
           git push

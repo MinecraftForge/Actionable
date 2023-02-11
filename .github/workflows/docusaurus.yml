@@ -15,6 +15,19 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Check out repo
         uses: actions/checkout@v3
+
+      # Run gradle build and generate docs
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Execute Gradle build
+        run: ./gradlew build
+
       # Node is required for npm
       - name: Set up Node
         uses: actions/setup-node@v3

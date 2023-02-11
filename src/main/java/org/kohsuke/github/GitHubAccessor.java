@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.Map;
@@ -32,9 +33,13 @@ public class GitHubAccessor {
         issue.wrap(repository);
     }
 
-    public static void lock(GHIssue issue, LockReason reason) throws IOException {
-        issue.root().createRequest().method("PUT").withUrlPath(issue.getIssuesApiRoute() + "/lock")
-                .inBody().with("lock_reason", reason.toString()).send();
+    public static void lock(GHIssue issue, @Nullable LockReason reason) throws IOException {
+        if (reason == null) {
+            issue.lock();
+        } else {
+            issue.root().createRequest().method("PUT").withUrlPath(issue.getIssuesApiRoute() + "/lock")
+                    .inBody().with("lock_reason", reason.toString()).send();
+        }
     }
 
     public static void merge(GHPullRequest pr, String title, String message, GHPullRequest.MergeMethod method) throws IOException {

@@ -1,68 +1,57 @@
 package net.minecraftforge.actionable.commands;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import net.minecraftforge.actionable.commands.lib.GHCommandContext;
+import net.minecraftforge.actionable.annotation.Argument;
+import net.minecraftforge.actionable.annotation.Command;
+import net.minecraftforge.actionable.annotation.StringType;
+import net.minecraftforge.actionable.annotations.Require;
+import net.minecraftforge.actionable.commands.lib.Requirement;
 import net.minecraftforge.actionable.util.Label;
 import org.kohsuke.github.GHIssue;
-import org.kohsuke.github.GHPermissionType;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHTeam;
 import org.kohsuke.github.GHUser;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
 
+import java.io.IOException;
 import java.util.Locale;
-import java.util.function.Predicate;
-
-import static net.minecraftforge.actionable.commands.Commands.argument;
-import static net.minecraftforge.actionable.commands.Commands.hasPermission;
-import static net.minecraftforge.actionable.commands.Commands.isTriage;
-import static net.minecraftforge.actionable.commands.Commands.literal;
-import static net.minecraftforge.actionable.util.FunctionalInterfaces.wrap;
 
 public class PRManagementCommands {
-    public static void register(GitHub gh, CommandDispatcher<GHCommandContext> dispatcher) {
-        final Predicate<GHCommandContext> canManage = isTriage().or(hasPermission(GHPermissionType.WRITE));
+    public static final String GROUP = "pr_management";
 
-        dispatcher.register(literal("shipit")
-                .requires(hasPermission(GHPermissionType.WRITE).and(ctx -> ctx.issue().isPullRequest()))
-                .executes(wrap(ctx -> {
-                    final GHPullRequest pr = ctx.getSource().pullRequest();
-                    final String title = pr.getTitle() + " (#" + pr.getNumber() + ")";
-                    GitHubAccessor.merge(pr, title, null, GHPullRequest.MergeMethod.SQUASH);
-                    ctx.getSource().issue().comment(":shipit:");
-                })));
+    @Require(Requirement.CAN_MANAGE_ISSUE)
+    @Command(name = "closes", category = GROUP, description = "Append `Closes <issue>` to the body of an issue.")
+    public static void closes(GHIssue issue, @Argument(stringType = StringType.GREEDY_STRING, description = "the number of the issue to close. It may be preceded by a `#`.") String toClose) throws IOException {
+        toClose = toClose.trim();
+        final String body = issue.getBody();
+        final String bodyN = body == null || body.isBlank() ? "" : body + "\n";
+        issue.setBody(
+                bodyN + (toClose.startsWith("#") ? toClose : "#" + toClose)
+        );
+    }
 
-        dispatcher.register(literal("closes")
-                .requires(canManage.and(it -> it.issue().isPullRequest()))
-                .then(argument("issue", StringArgumentType.greedyString())
-                        .executes(wrap(ctx -> {
-                            final String body = ctx.getSource().issue().getBody();
-                            final String bodyN = body == null || body.isBlank() ? "" : body + "\n";
-                            final String toClose = StringArgumentType.getString(ctx, "issue").trim();
-                            ctx.getSource().issue().setBody(
-                                    bodyN + (toClose.startsWith("#") ? toClose : "#" + toClose)
-                            );
-                        }))));
+    @Require(Requirement.CAN_MANAGE_ISSUE)
+    @Command(name = "assign", category = GROUP, description = "Assign a team of people to an issue / PR.")
+    public static void assign(GitHub gitHub, GHIssue issue, @Argument(stringType = StringType.GREEDY_STRING, description = "the team to assign. Can be a reference like `triage` or a mention like `@minecraftforge/triage`.") String team) throws IOException {
+        final GHUser author = issue.getUser();
+        final GHTeam theTeam = gitHub
+                .getOrganization(issue.getRepository().getOwnerName())
+                .getTeamBySlug(parseTeam(team).trim());
 
-        dispatcher.register(literal("assign")
-                .requires(canManage)
-                .then(argument("team", StringArgumentType.greedyString())
-                        .executes(wrap(ctx -> {
-                            final GHIssue issue = ctx.getSource().issue();
-                            final GHUser author = issue.getUser();
-                            final GHTeam team = ctx.getSource().gitHub()
-                                    .getOrganization(issue.getRepository().getOwnerName())
-                                    .getTeamBySlug(parseTeam(StringArgumentType.getString(ctx, "team")).trim());
+        // We don't want to assign the PR author to their own PR
+        issue.setAssignees(theTeam.getMembers().stream()
+                .filter(it -> !it.equals(author)).limit(10).toList());
 
-                            // We don't want to assign the PR author to their own PR
-                            issue.setAssignees(team.getMembers().stream()
-                                    .filter(it -> !it.equals(author)).limit(10).toList());
+        Label.ASSIGNED.addAndIgnore(issue);
+        Label.TRIAGE.removeAndIgnore(issue);
+    }
 
-                            Label.ASSIGNED.addAndIgnore(issue);
-                            Label.TRIAGE.removeAndIgnore(issue);
-                        }))));
+    @Require({Requirement.HAS_WRITE_PERMS, Requirement.IN_PULL_REQUEST})
+    @Command(name = "shipit", category = GROUP, description = "Merge the pull request.")
+    public static void shipit(GHPullRequest pr) throws IOException {
+        final String title = pr.getTitle() + " (#" + pr.getNumber() + ")";
+        GitHubAccessor.merge(pr, title, null, GHPullRequest.MergeMethod.SQUASH);
+        pr.comment(":shipit:");
     }
 
     private static String parseTeam(String input) {

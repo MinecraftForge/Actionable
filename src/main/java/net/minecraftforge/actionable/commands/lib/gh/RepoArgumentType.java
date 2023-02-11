@@ -5,6 +5,7 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
+import net.minecraftforge.actionable.util.GithubVars;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 
@@ -15,6 +16,10 @@ public record RepoArgumentType(RepoGetter getter) implements ArgumentType<GHRepo
 
     public static RepoArgumentType repo(GitHub gitHub) {
         return new RepoArgumentType(gitHub::getRepository);
+    }
+
+    public static RepoArgumentType inCurrentOrg(GitHub gitHub) {
+        return repo(gitHub, GithubVars.REPOSITORY_OWNER.get());
     }
 
     public static RepoArgumentType repo(GitHub gitHub, String org) {

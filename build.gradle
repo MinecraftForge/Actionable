@@ -3,6 +3,19 @@ plugins {
   id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
+sourceSets {
+  ap
+  annotations
+}
+
+configurations {
+  apImplDep
+  annotationsCompileOnly.extendsFrom(apImplDep)
+  implementation.extendsFrom(apImplDep)
+  apImplementation.extendsFrom(apImplDep)
+  annotationProcessor.extendsFrom(apImplDep)
+}
+
 repositories {
   mavenCentral()
   maven {
@@ -11,6 +24,9 @@ repositories {
 }
 
 dependencies {
+  implementation sourceSets.annotations.output
+  apCompileOnly sourceSets.annotations.output
+
   compileOnly 'org.jetbrains:annotations:23.1.0'
   implementation 'org.kohsuke:github-api:1.313'
   implementation 'org.bouncycastle:bcpkix-jdk15on:1.58'
@@ -20,13 +36,33 @@ dependencies {
   implementation 'io.jsonwebtoken:jjwt-impl:0.10.5'
   implementation 'io.jsonwebtoken:jjwt-jackson:0.10.5'
 
-  implementation 'com.mojang:brigadier:1.0.18'
+  apImplDep 'com.mojang:brigadier:1.0.18'
+
+  annotationProcessor sourceSets.ap.output
+  annotationProcessor sourceSets.annotations.output
 }
 
 shadowJar {
+  from(sourceSets.annotations.output)
   manifest.attributes([
           'Main-Class': 'net.minecraftforge.actionable.Main'
   ])
   destinationDirectory = file('dist')
   archiveFileName = 'app.jar'
+}
+
+tasks.named('compileJava', JavaCompile).configure {
+  options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+  options.compilerArgs.addAll([
+          "-AtemplatesLocation=$projectDir/docs/_templates"
+  ])
+  finalizedBy('copyGeneratedDocs')
+}
+
+tasks.register('copyGeneratedDocs', Copy) {
+  it.destinationDir(projectDir)
+  it.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  it.from('build/generated/sources/annotationProcessor/java/main/docs/commands') {
+    into('docs/docs/commands')
+  }
 }

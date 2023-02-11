@@ -2,6 +2,7 @@ package net.minecraftforge.actionable.util;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import java.io.IOException;
 import java.util.function.Predicate;
@@ -17,6 +18,16 @@ public class FunctionalInterfaces {
             }
 
             return Command.SINGLE_SUCCESS;
+        };
+    }
+
+    public static <T> Command<T> throwingCommand(CommandException<T> command) {
+        return context -> {
+            try {
+                return command.run(context);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         };
     }
 
@@ -72,5 +83,10 @@ public class FunctionalInterfaces {
 
     public interface SupplierException<T> {
         T get() throws IOException;
+    }
+
+    @FunctionalInterface
+    public interface CommandException<T> {
+        int run(CommandContext<T> context) throws Exception;
     }
 }

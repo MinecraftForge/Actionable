@@ -1,0 +1,43 @@
+name: build-dist
+
+on:
+  push:
+    branches: [v1]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      # Run gradle shadowJar and generate the dist jar
+      - uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Grant execute perms for gradlew
+        run: chmod +x gradlew
+      - name: Execute Gradle build
+        run: ./gradlew shadowJar
+
+      # Node is required for npm
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Push changes
+        run: |
+          git add dist/app.jar
+          git commit -m "Built dist jar"
+          git push

@@ -7,6 +7,9 @@ import java.util.Locale;
 public enum Action {
     OPENED,
     CREATED,
+    REOPENED,
+    CLOSED,
+
     EDITED,
     SUBMITTED,
     READY_FOR_REVIEW,

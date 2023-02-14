@@ -24,6 +24,9 @@ public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
                 Payload.class, payload -> GitHubAccessor.wrapUp(payload.issue, payload.repository),
                 payloadRegistrar -> payloadRegistrar
                         .register(Action.OPENED, IssueHandler::onCreate)
+                        .register(Action.CLOSED, (gitHub, payload) -> Label.TRIAGE.removeAndIgnore(payload.issue))
+                        .register(Action.REOPENED, (gitHub, payload) -> Label.TRIAGE.addAndIgnore(payload.issue))
+
                         .register(Action.LABELED, IssueHandler::onLabelLock)
                         .register(Action.UNLABELED, IssueHandler::onLabelLockRemove)
         );

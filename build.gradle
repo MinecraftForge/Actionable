@@ -1,5 +1,6 @@
 plugins {
   id 'java'
+  id 'org.cadixdev.licenser' version '0.6.1'
   id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
@@ -40,6 +41,11 @@ dependencies {
 
   annotationProcessor sourceSets.ap.output
   annotationProcessor sourceSets.annotations.output
+}
+
+license {
+  header = file('LICENSE-header')
+  include '**/*.java'
 }
 
 shadowJar {

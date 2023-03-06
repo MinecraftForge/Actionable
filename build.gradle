@@ -72,3 +72,9 @@ tasks.register('copyGeneratedDocs', Copy) {
     into('docs/docs/commands')
   }
 }
+
+tasks.register('makeWorkflowsZip', Zip) {
+  it.destinationDirectory.set(file('dist'))
+  it.archiveFileName.set('workflows.zip')
+  it.from('workflowTemplates')
+}

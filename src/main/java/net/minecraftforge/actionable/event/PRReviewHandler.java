@@ -38,7 +38,7 @@ public class PRReviewHandler implements EventHandler {
         if (action != Action.SUBMITTED) return;
 
         final GitHub gitHub = gitHubGetter.get();
-        if (RepoConfig.INSTANCE.triage() == null) return;
+        if (!RepoConfig.INSTANCE.featureEnabled("autoAssign") || RepoConfig.INSTANCE.triage() == null) return;
         final ObjectReader reader = GitHubAccessor.objectReader(gitHub);
 
         final Context ctx = Jsons.read(reader, payload, Context.class);

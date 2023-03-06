@@ -28,7 +28,7 @@ jobs:
       - name: Grant execute perms for gradlew
         run: chmod +x gradlew
       - name: Execute Gradle build
-        run: ./gradlew shadowJar
+        run: ./gradlew shadowJar makeWorkflowsZip
 
       - name: Push changes
         run: |
@@ -36,5 +36,6 @@ jobs:
           git config --global user.name "autoforge[bot]"
           
           git add dist/app.jar
-          git commit -m "Built dist jar"
+          git add dist/workflows.zip
+          git commit -m "Build dist jar"
           git push

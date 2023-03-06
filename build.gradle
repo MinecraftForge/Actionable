@@ -66,11 +66,9 @@ tasks.named('compileJava', JavaCompile).configure {
 }
 
 tasks.register('copyGeneratedDocs', Copy) {
-  it.destinationDir(projectDir)
+  it.destinationDir(file('docs/docs/commands'))
   it.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-  it.from('build/generated/sources/annotationProcessor/java/main/docs/commands') {
-    into('docs/docs/commands')
-  }
+  it.from('build/generated/sources/annotationProcessor/java/main/docs/commands')
 }
 
 tasks.register('makeWorkflowsZip', Zip) {

@@ -11,7 +11,7 @@ import net.minecraftforge.actionable.Main;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import org.kohsuke.github.GHOrganization;
 import org.kohsuke.github.GHPullRequest;

@@ -11,7 +11,7 @@ import net.minecraftforge.actionable.Main;
 import net.minecraftforge.actionable.commands.Commands;
 import net.minecraftforge.actionable.commands.lib.CommandManager;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import org.kohsuke.github.GitHub;
 
 public class IssueCommentHandler implements EventHandler {

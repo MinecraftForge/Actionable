@@ -10,7 +10,7 @@ import net.minecraftforge.actionable.util.DiffUtils;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHIssue;
@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
 
@@ -39,7 +37,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
                         .register(Action.OPENED, PRHandler::onCreate)
                         .register(Action.SYNCHRONIZE, PRHandler::onSync)
                         .register(Action.READY_FOR_REVIEW, (gitHub, payload, payloadJson) -> {
-                            if (RepoConfig.INSTANCE.triage() == null) return;
+                            if (!RepoConfig.INSTANCE.featureEnabled("prTriage") || RepoConfig.INSTANCE.triage() == null) return;
                             final GHTeam team = payload.organization.getTeamBySlug(RepoConfig.INSTANCE.triage().teamName());
                             if (!payload.pull_request.getRequestedTeams().contains(team)) {
                                 payload.pull_request.requestTeamReviewers(List.of(team));
@@ -95,7 +93,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
         steps.add(() -> Label.TRIAGE.add(pullRequest));
         steps.add(() -> {
             final String prVersion = getPRVersion(pullRequest);
-            if (prVersion != null) {
+            if (RepoConfig.INSTANCE.featureEnabled("versionLabels") && prVersion != null) {
                 final String latestLabel = RepoConfig.INSTANCE.labels().get(Label.LATEST.getId());
                 if (latestLabel != null) {
                     if (!latestLabel.equals(prVersion)) {
@@ -120,6 +118,8 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
         });
 
         steps.add(() -> {
+            if (!RepoConfig.INSTANCE.featureEnabled("autoFeatureLabel")) return;
+
             final List<String> newFiles = DiffUtils.detectNewFiles(GitHubAccessor.getDiff(pullRequest).split("\n"));
 
             if (newFiles.stream().anyMatch(it -> it.contains("/event/") /* Check for new files in an event package */)) {
@@ -135,7 +135,7 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
             */
         });
 
-        if (RepoConfig.INSTANCE.triage() != null) {
+        if (RepoConfig.INSTANCE.featureEnabled("prTriage") && RepoConfig.INSTANCE.triage() != null) {
             if (!pullRequest.isDraft()) steps.add(() -> pullRequest.requestTeamReviewers(List.of(
                     organization.getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
             )));

@@ -7,7 +7,6 @@ package net.minecraftforge.actionable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import net.minecraftforge.actionable.event.EventHandler;
 import net.minecraftforge.actionable.event.IssueCommentHandler;
 import net.minecraftforge.actionable.event.IssueHandler;
@@ -17,8 +16,7 @@ import net.minecraftforge.actionable.event.PushHandler;
 import net.minecraftforge.actionable.util.AuthUtil;
 import net.minecraftforge.actionable.util.GitHubEvent;
 import net.minecraftforge.actionable.util.GithubVars;
-import net.minecraftforge.actionable.util.Jsons;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import org.kohsuke.github.GHArtifact;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubAccessor;
@@ -43,7 +41,6 @@ import java.util.zip.ZipInputStream;
 
 import static net.minecraftforge.actionable.util.GitHubEvent.ISSUES;
 import static net.minecraftforge.actionable.util.GitHubEvent.ISSUE_COMMENT;
-import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_REVIEW;
 import static net.minecraftforge.actionable.util.GitHubEvent.PULL_REQUEST_TARGET;
 import static net.minecraftforge.actionable.util.GitHubEvent.PUSH;
@@ -134,13 +131,7 @@ public record Main(
                 location.directory(), location.branch(),
                 GithubVars.REPOSITORY.get()
         );
-        RepoConfig.INSTANCE = new RepoConfig(
-                unsanitized.labels() == null ? Map.of() : unsanitized.labels(),
-                unsanitized.labelLocks() == null ? Map.of() : unsanitized.labelLocks(),
-                unsanitized.triage(),
-                unsanitized.labelTeams() == null ? new LinkedHashMap<>() : unsanitized.labelTeams(),
-                unsanitized.commands()
-        );
+        RepoConfig.INSTANCE = unsanitized.sanitize();
     }
 
     private JsonNode payload() throws IOException {

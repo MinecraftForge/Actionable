@@ -12,7 +12,7 @@ import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.MergeableState;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHEvent;

@@ -9,7 +9,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import org.kohsuke.github.GHPermissionType;
 import org.kohsuke.github.GitHub;
 

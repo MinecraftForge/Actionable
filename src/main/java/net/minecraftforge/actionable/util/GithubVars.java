@@ -5,6 +5,8 @@
 
 package net.minecraftforge.actionable.util;
 
+import net.minecraftforge.actionable.util.config.RepoConfig;
+
 import java.util.function.Function;
 import java.util.function.Supplier;
 

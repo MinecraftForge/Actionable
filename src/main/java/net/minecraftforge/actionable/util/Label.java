@@ -5,6 +5,7 @@
 
 package net.minecraftforge.actionable.util;
 
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GitHubAccessor;
 
@@ -23,7 +24,7 @@ public enum Label {
 
     LATEST("latest");
 
-    final String id, defaultName;
+    public final String id, defaultName;
 
     Label(String id, String defaultName) {
         this.id = id;

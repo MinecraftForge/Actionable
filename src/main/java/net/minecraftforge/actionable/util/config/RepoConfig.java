@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-only
  */
 
-package net.minecraftforge.actionable.util;
+package net.minecraftforge.actionable.util.config;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import net.minecraftforge.actionable.util.Label;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHOrganization;
 import org.kohsuke.github.GHRepository;
@@ -30,12 +31,14 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public record RepoConfig(
+    FeaturePredicate features,
     Map<String, String> labels,
     Map<String, LabelLock> labelLocks,
 
@@ -45,6 +48,7 @@ public record RepoConfig(
     @Nullable Commands commands
 ) {
     public static final RepoConfig DEFAULT = new RepoConfig(
+            FeaturePredicate.DEFAULT,
             Stream.of(Label.values()).collect(Collectors.toMap(a -> a.id, a -> a.defaultName)),
             Map.of(
                     "Forum", new LabelLock(true, null, true, """
@@ -79,6 +83,21 @@ public record RepoConfig(
                 .content(MAPPER.writeValueAsBytes(config))
                 .message("Create configuration for repository " + target)
                 .commit();
+    }
+
+    public RepoConfig sanitize() {
+        return new RepoConfig(
+                Objects.requireNonNullElse(features, FeaturePredicate.DEFAULT),
+                Objects.requireNonNullElse(labels, Map.of()),
+                Objects.requireNonNullElse(labelLocks, Map.of()),
+                triage(),
+                Objects.requireNonNullElseGet(labelTeams, LinkedHashMap::new),
+                commands()
+        );
+    }
+
+    public boolean featureEnabled(String featureName) {
+        return features.test(featureName);
     }
 
     public record LabelLock(

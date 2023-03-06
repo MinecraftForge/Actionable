@@ -14,6 +14,7 @@ import org.kohsuke.github.GitHubAccessor;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 public abstract class ByActionEventHandler<T extends Record> implements EventHandler {
@@ -59,6 +60,14 @@ public abstract class ByActionEventHandler<T extends Record> implements EventHan
 
         default Registrar<T> register(Action action, JsonlessHandler<T> handler) {
             return register(action, (gitHub, payload, payloadJson) -> handler.handle(gitHub, payload));
+        }
+
+        default Registrar<T> register(Action action, BooleanSupplier shouldRun, JsonlessHandler<T> handler) {
+            return register(action, (gitHub, payload, payloadJson) -> {
+                if (shouldRun.getAsBoolean()) {
+                    handler.handle(gitHub, payload);
+                }
+            });
         }
 
         @SuppressWarnings("unchecked")

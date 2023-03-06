@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.Or;
-import net.minecraftforge.actionable.util.RepoConfig;
+import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHOrganization;
@@ -28,7 +28,7 @@ public class IssueHandler extends ByActionEventHandler<IssueHandler.Payload> {
         super(
                 Payload.class, payload -> GitHubAccessor.wrapUp(payload.issue, payload.repository),
                 payloadRegistrar -> payloadRegistrar
-                        .register(Action.OPENED, IssueHandler::onCreate)
+                        .register(Action.OPENED, () -> RepoConfig.INSTANCE.featureEnabled("versionLabels"), IssueHandler::onCreate)
                         .register(Action.CLOSED, (gitHub, payload) -> Label.TRIAGE.removeAndIgnore(payload.issue))
                         .register(Action.REOPENED, (gitHub, payload) -> Label.TRIAGE.addAndIgnore(payload.issue))
 

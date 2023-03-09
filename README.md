@@ -1,6 +1,7 @@
 # Actionable
 
-Custom GitHub actions for MinecraftForge repositories.
+Custom GitHub actions for MinecraftForge repositories.  
+Check out the docs [here](https://minecraftforge.github.io/Actionable/).
 
 ## Inputs
 

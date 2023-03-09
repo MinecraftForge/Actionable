@@ -31,7 +31,7 @@ public class PRManagementCommands {
         final String body = issue.getBody();
         final String bodyN = body == null || body.isBlank() ? "" : body + "\n";
         issue.setBody(
-                bodyN + (toClose.startsWith("#") ? toClose : "#" + toClose)
+                bodyN + "Closes " + (toClose.startsWith("#") ? toClose : "#" + toClose)
         );
     }
 

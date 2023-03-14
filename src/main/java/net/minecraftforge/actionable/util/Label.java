@@ -21,6 +21,7 @@ public enum Label {
     ASSIGNED("Assigned"),
     TRIAGE("Triage"),
     RFC("RFC"),
+    BUG("bug"),
 
     LATEST("latest");
 
@@ -55,6 +56,10 @@ public enum Label {
             remove(issue);
         } catch (IOException ignored) {
         }
+    }
+
+    public boolean issueHasLabel(GHIssue issue) {
+        return issue.getLabels().stream().anyMatch(it -> it.getName().equalsIgnoreCase(getLabelName()));
     }
 
     public String getId() {

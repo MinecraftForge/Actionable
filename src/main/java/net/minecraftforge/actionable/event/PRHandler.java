@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
@@ -132,6 +133,20 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
 
             steps.add(() -> addToProject(gitHub, organization, RepoConfig.INSTANCE.triage().projectId(), pullRequest));
         }
+
+        steps.add(() -> {
+            final PullRequestInfo prInfo = GitHubAccessor.graphQl(gitHub, new GetPullRequestQuery(payload.repository.getOwnerName(),
+                    payload.repository.getName(), pullRequest.getNumber())).repository().pullRequest().fragments().pullRequestInfo();
+            final var refs = prInfo.closingIssuesReferences();
+            if (refs != null) {
+                for (final var node : Objects.<List<PullRequestInfo.Node1>>requireNonNullElse(refs.nodes(), List.of())) {
+                    final var issue = payload.repository.getIssue(node.number());
+                    if (Label.BUG.issueHasLabel(issue)) {
+                        Label.BUG.add(pullRequest);
+                    }
+                }
+            }
+        });
 
         steps.forEach(runnable -> {
             try {

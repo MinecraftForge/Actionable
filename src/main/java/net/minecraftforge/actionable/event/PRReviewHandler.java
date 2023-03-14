@@ -7,6 +7,11 @@ package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.github.api.GetProjectFieldsQuery;
+import com.github.api.GetPullRequestQuery;
+import com.github.api.UpdateProjectItemMutation;
+import com.github.api.fragment.PullRequestInfo;
+import com.github.api.type.ProjectV2FieldValue;
 import net.minecraftforge.actionable.Main;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.Jsons;
@@ -83,84 +88,32 @@ public class PRReviewHandler implements EventHandler {
     }
 
     private static FieldData getSelectField(GitHub gitHub, String projectId, String fieldName) throws IOException {
-        final JsonNode response = GitHubAccessor.graphQl(gitHub, """
-                query{
-                  node(id: "%s") {
-                    ... on ProjectV2 {
-                      fields(first: 20) {
-                        nodes {
-                          ... on ProjectV2Field {
-                            id
-                            name
-                          }
-                          ... on ProjectV2IterationField {
-                            id
-                            name
-                            configuration {
-                              iterations {
-                                startDate
-                                id
-                              }
-                            }
-                          }
-                          ... on ProjectV2SingleSelectField {
-                            id
-                            name
-                            options {
-                              id
-                              name
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }""", projectId);
-        return Jsons.stream(Jsons.at(response, "data.node.fields.nodes"))
-                .filter(it -> it.get("name").asText().equalsIgnoreCase(fieldName))
-                .map(it -> new FieldData(it.get("id").asText(), it.get("name").asText(), Jsons.stream(it.get("options"))
-                        .collect(Collectors.toMap(js -> js.get("name").asText(), js -> js.get("id").asText())))).findFirst().orElseThrow();
+        return ((GetProjectFieldsQuery.AsProjectV2) GitHubAccessor.graphQl(gitHub, new GetProjectFieldsQuery(projectId))
+                .node()).fields().nodes().stream()
+                .filter(it -> it instanceof GetProjectFieldsQuery.AsProjectV2SingleSelectField)
+                .map(GetProjectFieldsQuery.AsProjectV2SingleSelectField.class::cast)
+                .filter(it -> it.name().equalsIgnoreCase(fieldName))
+                .map(it -> new FieldData(it.id(), it.name(), it.options().stream()
+                        .collect(Collectors.toMap(GetProjectFieldsQuery.Option::name, GetProjectFieldsQuery.Option::id))))
+                .findFirst().orElseThrow();
     }
 
     private static void updateField(GitHub gitHub, String projectId, FieldData fieldData, String itemId, String value) throws IOException {
-        GitHubAccessor.graphQl(gitHub, """
-                mutation {
-                    updateProjectV2ItemFieldValue(
-                      input: {
-                        projectId: "%s"
-                        itemId: "%s"
-                        fieldId: "%s"
-                        value: {\s
-                          singleSelectOptionId: "%s"       \s
-                        }
-                      }
-                    ) {
-                      projectV2Item {
-                        id
-                      }
-                    }
-                  }""", projectId, itemId, fieldData.id, fieldData.options.get(value));
+        GitHubAccessor.graphQl(gitHub, UpdateProjectItemMutation.builder()
+                .fieldId(fieldData.id)
+                .projectId(projectId)
+                .itemId(itemId)
+                .value(ProjectV2FieldValue.builder()
+                        .singleSelectOptionId(fieldData.options.get(value))
+                        .build())
+                .build());
     }
 
     public static String getPRNodeId(GitHub gitHub, GHPullRequest pr, String projectId) throws IOException {
-        return Jsons.stream(Jsons.at(GitHubAccessor.graphQl(gitHub, """
-                query {
-                  repository(owner: "%s", name: "%s") {
-                    pullRequest(number: %s) {
-                      projectItems(first: 100) {
-                        nodes {
-                          id
-                          project {
-                            id
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                """, pr.getRepository().getOwnerName(), pr.getRepository().getName(), pr.getNumber()), "data.repository.pullRequest.projectItems.nodes"))
-                .filter(it -> it.get("project").get("id").asText().equals(projectId))
-                .map(it -> it.get("id").asText()).findFirst().orElseThrow();
+        return GitHubAccessor.graphQl(gitHub, new GetPullRequestQuery(pr.getRepository().getOwnerName(), pr.getRepository().getName(), pr.getNumber()))
+                .repository().pullRequest().fragments().pullRequestInfo()
+                .projectItems().nodes().stream().filter(it -> it.project().id().equals(projectId))
+                .findFirst().map(PullRequestInfo.Node2::id).orElseThrow();
     }
 
     public record FieldData(String id, String name, Map<String, String> options) {}

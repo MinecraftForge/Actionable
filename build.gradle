@@ -2,6 +2,7 @@ plugins {
   id 'java'
   id 'org.cadixdev.licenser' version '0.6.1'
   id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id 'com.apollographql.apollo' version '2.5.9'
 }
 
 sourceSets {
@@ -37,15 +38,25 @@ dependencies {
   implementation 'io.jsonwebtoken:jjwt-impl:0.10.5'
   implementation 'io.jsonwebtoken:jjwt-jackson:0.10.5'
 
+  implementation 'com.apollographql.apollo:apollo-runtime:2.5.9' // Apollo (GraphQL)
+  implementation 'com.apollographql.apollo:apollo-rx3-support:2.5.9' // Apollo support for RxJava3
+
   apImplDep 'com.mojang:brigadier:1.0.18'
 
   annotationProcessor sourceSets.ap.output
   annotationProcessor sourceSets.annotations.output
 }
 
+apollo {
+  customTypeMapping = [
+          'URI'     : 'java.net.URI'
+  ]
+}
+
 license {
   header = file('LICENSE-header')
   include '**/*.java'
+  exclude 'com/github/api/**'
 }
 
 shadowJar {

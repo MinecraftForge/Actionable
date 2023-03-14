@@ -7,15 +7,15 @@ package net.minecraftforge.actionable.commands.lib;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.github.api.type.ReportedContentClassifiers;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
-import net.minecraftforge.actionable.util.FunctionalInterfaces;
-import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
 import org.kohsuke.github.GHIssue;
 import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.GHRepository;

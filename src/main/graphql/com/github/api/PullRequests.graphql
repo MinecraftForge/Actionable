@@ -1,0 +1,21 @@
+query GetPullRequest($owner: String!, $name: String!, $number: Int!) {
+    repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+            ...PullRequestInfo
+        }
+    }
+}
+
+query GetPullRequests($owner: String!, $name: String!, $baseRef: String, $states: [PullRequestState!]) {
+    repository(owner: $owner, name: $name) {
+        pullRequests(first: 100, after: null, states: $states, baseRefName: $baseRef) {
+            nodes {
+                ...PullRequestInfo
+            }
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
+        }
+    }
+}

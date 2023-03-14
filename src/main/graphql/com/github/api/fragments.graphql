@@ -1,0 +1,28 @@
+fragment PullRequestInfo on PullRequest {
+    mergeable
+    number
+    permalink
+    title
+    updatedAt
+    labels(first: 100) {
+        nodes {
+            name
+        }
+    }
+    closingIssuesReferences(first: 100) {
+        nodes {
+            number
+        }
+    }
+    projectItems(first: 100) {
+        nodes {
+            id
+            project {
+                id
+            }
+        }
+    }
+    repository {
+        nameWithOwner
+    }
+}

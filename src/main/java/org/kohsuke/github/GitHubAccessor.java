@@ -5,22 +5,56 @@
 
 package org.kohsuke.github;
 
+import com.apollographql.apollo.ApolloCall;
+import com.apollographql.apollo.ApolloClient;
+import com.apollographql.apollo.api.CustomTypeAdapter;
+import com.apollographql.apollo.api.CustomTypeValue;
+import com.apollographql.apollo.api.Error;
+import com.apollographql.apollo.api.Operation;
+import com.apollographql.apollo.api.Response;
+import com.apollographql.apollo.exception.ApolloException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import net.minecraftforge.actionable.util.GithubVars;
-import net.minecraftforge.actionable.util.enums.ReportedContentClassifiers;
+import com.github.api.MinimizeCommentMutation;
+import com.github.api.type.CustomType;
+import com.github.api.type.ReportedContentClassifiers;
+import net.minecraftforge.actionable.util.ApolloReader;
+import org.apache.commons.io.input.ReaderInputStream;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.kohsuke.github.function.InputStreamFunction;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class GitHubAccessor {
     private static final Map<GHRepository, Set<String>> EXISTING_LABELS = new ConcurrentHashMap<>();
+    @SuppressWarnings("DataFlowIssue")
+    public static final ApolloClient CLIENT = ApolloClient.builder()
+            .serverUrl("https://api.github.com/graphql")
+            .callFactory(request -> null)
+            .addCustomTypeAdapter(CustomType.URI, new CustomTypeAdapter<URI>() {
+
+                @NotNull
+                @Override
+                public CustomTypeValue<?> encode(URI uri) {
+                    return new CustomTypeValue.GraphQLString(uri.toString());
+                }
+
+                @Override
+                public URI decode(@NotNull CustomTypeValue<?> customTypeValue) {
+                    return URI.create(customTypeValue.value.toString());
+                }
+            }).build();
+    public static final ApolloReader READER = ApolloReader.ofClient(CLIENT);
 
     public static ObjectReader objectReader(GitHub gitHub) {
         return GitHubClient.getMappingObjectReader(gitHub);
@@ -67,6 +101,27 @@ public class GitHubAccessor {
                 .fetch(JsonNode.class);
     }
 
+    public static <T> T graphQl(GitHub gitHub, String query, InputStreamFunction<T> isF) throws IOException {
+        return gitHub.createRequest()
+                .method("POST")
+                .inBody()
+                .with(new ReaderInputStream(new StringReader(query), StandardCharsets.UTF_8))
+                .withUrlPath("/graphql")
+                .fetchStream(isF);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T graphQl(GitHub gitHub, Operation<?, T, ?> call) throws IOException {
+        final Response<T> response = graphQl(gitHub, call.composeRequestBody().utf8(), in -> (Response<T>) READER.read(call, in));
+        final T res = response.getData();
+        if (res == null) {
+            throw new ApolloException(Objects.<List<Error>>requireNonNullElse(response.getErrors(), List.of()).stream()
+                    .map(Error::toString).collect(Collectors.joining("; ")));
+        } else {
+            return res;
+        }
+    }
+
     public static GHArtifact[] getArtifacts(GitHub gitHub, String repo, long runId) throws IOException {
         return gitHub.createRequest()
                 .withUrlPath("/repos/" + repo + "/actions/runs/" + runId, "artifacts")
@@ -95,18 +150,9 @@ public class GitHubAccessor {
         };
     }
 
-    public static void minimize(GHIssueComment comment, ReportedContentClassifiers reason) throws IOException {
-        graphQl(comment.root(), """
-             mutation {
-                minimizeComment(input: {classifier: %s, subjectId: "%s"}) {
-                  minimizedComment {
-                    isMinimized
-                  }
-                }
-              }
-                """.formatted(
-                reason.name(), comment.getNodeId()
-        ));
+
+    public static void minimize(GHIssueComment comment, ReportedContentClassifiers classifiers) throws IOException {
+        graphQl(comment.root(), new MinimizeCommentMutation(classifiers, comment.getNodeId()));
     }
 
     public static void removeLabel(GHIssue issue, String label) throws IOException {
@@ -117,7 +163,7 @@ public class GitHubAccessor {
 
     public static void addLabel(GHIssue issue, String label) throws IOException {
         if (issue.getLabels().stream().noneMatch(it -> it.getName().equalsIgnoreCase(label)) &&
-            getExistingLabels(issue.getRepository()).stream().anyMatch(it -> it.equalsIgnoreCase(label))) {
+                getExistingLabels(issue.getRepository()).stream().anyMatch(it -> it.equalsIgnoreCase(label))) {
             issue.addLabels(label);
         }
     }

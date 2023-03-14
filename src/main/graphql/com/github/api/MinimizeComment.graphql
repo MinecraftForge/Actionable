@@ -1,0 +1,7 @@
+mutation MinimizeComment($reason: ReportedContentClassifiers!, $comment: ID!) {
+    minimizeComment(input: {classifier: $reason, subjectId: $comment}) {
+        minimizedComment {
+            isMinimized
+        }
+    }
+}

@@ -7,13 +7,15 @@ package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.github.api.GetPullRequestsQuery;
+import com.github.api.fragment.PullRequestInfo;
+import com.github.api.type.MergeableState;
+import com.github.api.type.PullRequestState;
 import net.minecraftforge.actionable.Main;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
-import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.config.RepoConfig;
-import net.minecraftforge.actionable.util.enums.MergeableState;
 import org.jetbrains.annotations.Nullable;
 import org.kohsuke.github.GHEvent;
 import org.kohsuke.github.GHPullRequest;
@@ -61,33 +63,16 @@ public class PushHandler implements EventHandler {
     }
 
     public static void checkPRConflicts(GitHub gitHub, GHRepository repository, String branchName) throws IOException {
-        final JsonNode json = GitHubAccessor.graphQl(gitHub, """
-                query {
-                  repository(owner: "%s", name: "%s") {
-                    pullRequests(first: 100, after: null, states: OPEN, baseRefName: "%s") {
-                      nodes {
-                        mergeable
-                        number
-                        permalink
-                        title
-                        updatedAt
-                        labels(first: 100) {
-                          nodes {
-                            name
-                          }
-                        }
-                      }
-                      pageInfo {
-                        endCursor
-                        hasNextPage
-                      }
-                    }
-                  }
-                }""", repository.getOwnerName(), repository.getName(), branchName);
+        final var prs = GitHubAccessor.graphQl(gitHub, GetPullRequestsQuery.builder()
+                .owner(repository.getOwnerName())
+                .name(repository.getName())
+                .baseRef(branchName)
+                .states(List.of(PullRequestState.OPEN))
+                .build()).repository().pullRequests()
+                .nodes();
 
         // TODO handle pagination in the future
-        final JsonNode nodes = Jsons.at(json, "data.repository.pullRequests.nodes");
-        final long unknownAmount = Jsons.stream(nodes).filter(it -> MergeableState.valueOf(it.get("mergeable").asText()) == MergeableState.UNKNOWN).count();
+        final long unknownAmount = prs.stream().filter(it -> it.fragments().pullRequestInfo().mergeable() == MergeableState.UNKNOWN).count();
         if (unknownAmount > 0) {
             // If we don't know the status of one or more PRs, give GitHub some time to think.
             SERVICE.schedule(() -> {
@@ -103,8 +88,8 @@ public class PushHandler implements EventHandler {
                 RepoConfig.INSTANCE.triage() == null ? Set.of() : gitHub.getOrganization(repository.getOwnerName())
                     .getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
                     .getMembers());
-        for (int i = 0; i < nodes.size(); i++) {
-            checkConflict(triagers, gitHub, nodes.get(i));
+        for (final var node : prs) {
+            checkConflict(triagers, gitHub, node.fragments().pullRequestInfo());
         }
     }
 
@@ -116,16 +101,13 @@ public class PushHandler implements EventHandler {
         return null;
     }
 
-    public static void checkConflict(FunctionalInterfaces.SupplierException<Set<GHUser>> triagers, GitHub gitHub, JsonNode node) throws IOException {
-        final boolean hasLabel = Jsons.stream(Jsons.at(node, "labels.nodes")).anyMatch(it -> it.get("name").asText().equalsIgnoreCase(Label.NEEDS_REBASE.getLabelName()));
-        System.out.println("Has label: " + hasLabel);
-        final MergeableState state = MergeableState.valueOf(node.get("mergeable").asText());
-        System.out.println("Has state: " + state);
+    public static void checkConflict(FunctionalInterfaces.SupplierException<Set<GHUser>> triagers, GitHub gitHub, PullRequestInfo info) throws IOException {
+        final boolean hasLabel = info.labels().nodes().stream().anyMatch(node -> node.name().equalsIgnoreCase(Label.NEEDS_REBASE.getLabelName()));
+        final MergeableState state = info.mergeable();
         if (hasLabel && state == MergeableState.CONFLICTING) return; // We have conflicts and the PR has the label already
 
-        final int number = node.get("number").intValue();
-        final String permalink = node.get("permalink").asText();
-        final GHRepository repo = gitHub.getRepository(permalink.substring("https://github.com/".length(), permalink.indexOf("/pull/")));
+        final int number = info.number();
+        final GHRepository repo = gitHub.getRepository(info.repository().nameWithOwner());
         final GHPullRequest pr = repo.getPullRequest(number);
         if (hasLabel && state == MergeableState.MERGEABLE) {
             // We don't have conflicts but the PR has the label... remove it.

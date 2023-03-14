@@ -6,9 +6,12 @@
 package net.minecraftforge.actionable.event;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.api.AddItemToProjectMutation;
+import com.github.api.GetProjectIDQuery;
+import com.github.api.GetPullRequestQuery;
+import com.github.api.fragment.PullRequestInfo;
 import net.minecraftforge.actionable.util.DiffUtils;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
-import net.minecraftforge.actionable.util.Jsons;
 import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.config.RepoConfig;
 import net.minecraftforge.actionable.util.enums.Action;
@@ -57,30 +60,17 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
     }
 
     private static void onSync(GitHub gitHub, Payload payload, JsonNode $) throws IOException {
-        final JsonNode queryJson = GitHubAccessor.graphQl(gitHub, """
-                query {
-                  repository(owner: "%s", name: "%s") {
-                    pullRequest(number: %s) {
-                        mergeable
-                        number
-                        permalink
-                        title
-                        updatedAt
-                        labels(first: 100) {
-                          nodes {
-                            name
-                          }
-                        }
-                    }
-                  }
-                }""", payload.repository.getOwnerName(), payload.repository.getName(), payload.pull_request.getNumber());
+        final PullRequestInfo info = GitHubAccessor.graphQl(gitHub, GetPullRequestQuery.builder()
+                .owner(payload.repository.getOwnerName())
+                .name(payload.repository.getName())
+                .number(payload.pull_request.getNumber())
+                .build()).repository().pullRequest().fragments().pullRequestInfo();
 
-        final JsonNode json = Jsons.at(queryJson, "data.repository.pullRequest");
         final FunctionalInterfaces.SupplierException<Set<GHUser>> triagers = FunctionalInterfaces.memoize(() ->
                 RepoConfig.INSTANCE.triage() == null ? Set.of() : payload.organization
                     .getTeamBySlug(RepoConfig.INSTANCE.triage().teamName())
                     .getMembers());
-        PushHandler.checkConflict(triagers, gitHub, json);
+        PushHandler.checkConflict(triagers, gitHub, info);
     }
 
     private static void onCreate(GitHub gitHub, Payload payload, JsonNode $) throws IOException {
@@ -154,31 +144,15 @@ public class PRHandler extends ByActionEventHandler<PRHandler.Payload> {
     }
 
     static String getProjectId(GitHub gitHub, GHOrganization organization, int projectId) throws IOException {
-        final JsonNode idQuery = GitHubAccessor.graphQl(gitHub, """
-                query{
-                    organization(login: "%s"){
-                      projectV2(number: %s) {
-                        id
-                      }
-                    }
-                  }""".formatted(
-                organization.getLogin(),
-                projectId
-        ));
-        return Jsons.at(idQuery, "data.organization.projectV2.id").asText();
+        return GitHubAccessor.graphQl(gitHub, new GetProjectIDQuery(organization.getLogin(), projectId))
+                .organization().projectV2().id();
     }
 
     private static void addToProject(GitHub gitHub, GHOrganization organization, int projectURL, GHPullRequest pullRequest) throws IOException {
-        GitHubAccessor.graphQl(gitHub, """
-            mutation {
-            addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) {
-                item {
-                  id
-                }
-              }
-            }""",
-            getProjectId(gitHub, organization, projectURL), pullRequest.getNodeId()
-        );
+        GitHubAccessor.graphQl(gitHub, new AddItemToProjectMutation(
+                getProjectId(gitHub, organization, projectURL),
+                pullRequest.getNodeId()
+        ));
     }
 
     @Nullable

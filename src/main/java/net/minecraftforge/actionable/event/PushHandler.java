@@ -58,7 +58,11 @@ public class PushHandler implements EventHandler {
                 .status(GHWorkflowRun.Status.IN_PROGRESS)
                 .list().iterator().nextPage();
 
-        if (inProgress.stream().anyMatch(it -> it.getName().equals(GithubVars.WORKFLOW.get()))) return; // Early exit if there's another push event in progress
+        if (inProgress.stream().anyMatch(it -> it.getRunNumber() != GithubVars.RUN_NUMBER.get() && it.getName().equals(GithubVars.WORKFLOW.get()))) { // Early exit if there's another push event in progress
+            System.out.println("Early exiting as there is another workflow in progress.");
+            return;
+        }
+
         checkPRConflicts(gh, repository, branch);
     }
 

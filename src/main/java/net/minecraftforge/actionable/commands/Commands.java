@@ -9,6 +9,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraftforge.actionable.commands.lib.GHCommandContext;
 import net.minecraftforge.actionable.util.FunctionalInterfaces;
 import net.minecraftforge.actionable.util.GithubVars;
+import net.minecraftforge.actionable.util.Label;
 import net.minecraftforge.actionable.util.config.RepoConfig;
 import org.kohsuke.github.GHPermissionType;
 import org.kohsuke.github.GitHub;
@@ -39,6 +40,16 @@ public class Commands {
     public static Predicate<GHCommandContext> isTriage() {
         if (RepoConfig.INSTANCE.triage() == null) return e -> false;
         return FunctionalInterfaces.wrapPred(ctx -> isInTeam(ctx, RepoConfig.INSTANCE.triage().teamName()));
+    }
+
+    public static Predicate<GHCommandContext> isLTSMember() {
+        return FunctionalInterfaces.wrapPred(ctx -> {
+            final RepoConfig.TeamLike team = RepoConfig.INSTANCE.labelTeams().get(Label.LTS_BACKPORT.getLabelName());
+            return team != null && team.isMember(
+                    ctx.gitHub(), ctx.gitHub().getOrganization(GithubVars.REPOSITORY_OWNER.get()),
+                    ctx.user()
+            );
+        });
     }
 
     public static Predicate<GHCommandContext> hasPermission(GHPermissionType permission) {

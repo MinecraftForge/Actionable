@@ -51,7 +51,7 @@ public class PRManagementCommands {
         Label.TRIAGE.removeAndIgnore(issue);
     }
 
-    @Require({Requirement.HAS_WRITE_PERMS, Requirement.IN_PULL_REQUEST})
+    @Require({Requirement.CAN_MERGE_LTS, Requirement.IN_PULL_REQUEST})
     @Command(name = "shipit", category = GROUP, description = "Merge the pull request.")
     public static void shipit(GHPullRequest pr) throws IOException {
         final String title = pr.getTitle() + " (#" + pr.getNumber() + ")";

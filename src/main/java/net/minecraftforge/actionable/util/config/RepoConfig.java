@@ -154,6 +154,10 @@ public record RepoConfig(
 
         Set<GHUser> getUsers(GitHub gitHub, GHOrganization organization) throws IOException;
 
+        default boolean isMember(GitHub gitHub, GHOrganization organization, GHUser user) throws IOException {
+            return getUsers(gitHub, organization).stream().anyMatch(u -> u.getLogin().equals(user.getLogin()));
+        }
+
         void serialize(JsonGenerator gen, SerializerProvider serializers) throws IOException;
 
         final class Serializer extends JsonSerializer<TeamLike> {

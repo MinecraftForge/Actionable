@@ -52,7 +52,7 @@ public class PRManagementCommands {
     }
 
     @Require({Requirement.CAN_MERGE_LTS, Requirement.IN_PULL_REQUEST})
-    @Command(name = "shipit", category = GROUP, description = "Merge the pull request.")
+    @Command(name = {"shipit", "merge"}, category = GROUP, description = "Merge the pull request.")
     public static void shipit(GHPullRequest pr) throws IOException {
         final String title = pr.getTitle() + " (#" + pr.getNumber() + ")";
         GitHubAccessor.merge(pr, title, null, GHPullRequest.MergeMethod.SQUASH);

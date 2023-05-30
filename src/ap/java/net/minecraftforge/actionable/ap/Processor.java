@@ -199,7 +199,9 @@ public class Processor extends AbstractProcessor {
         }
         if (!syntaxArgs.isEmpty()) docsBuilder.append(" ");
         docsBuilder.append(String.join(" ", syntaxArgs)).append("`  \n\n");
-        docsBuilder.append("Parameters:  \n").append(paramsDesc).append("  \n");
+        if (!paramsDesc.isEmpty()) {
+            docsBuilder.append("Parameters:  \n").append(paramsDesc).append("  \n");
+        }
 
         final Optional<String> require = method.getAnnotationMirrors().stream().filter(it -> names.types.isSameType(requireType, it.getAnnotationType().asElement().asType()))
                 .findFirst().map(annotation -> {

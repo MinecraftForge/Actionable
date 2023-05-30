@@ -62,9 +62,6 @@ public record Main(
         new Main(handlers).run();
     }
 
-    public record Thingy(RepoConfig.TeamLike team) {}
-    public record ThingyNested(Thingy thingy) {}
-
     public void run() throws Throwable {
         if (GithubVars.GH_APP_NAME.get() == null || GithubVars.GH_APP_NAME.get().isBlank() || GithubVars.GH_APP_KEY.get() == null || GithubVars.GH_APP_KEY.get().isBlank()) {
             System.out.println("No GitHub App ID or key was provided!");
